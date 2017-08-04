@@ -12,13 +12,12 @@
 ## Requirements
 
 - Python 2.7
-- Frida
+- Frida Server
 - ADB
 - Rooted device
 
 ## Usage
 
-Install the frida-server APK compatible with your Frida version and architecture. 
+Push the frida-server binary to the device, run it and run badada
+ 
 Frida-server can be found under [releases](https://github.com/frida/frida/releases) page on Frida's Github repository.
-
-Install frida-server in the `/data/local/tmp` directory on your phone, run frida-server and run badada.
