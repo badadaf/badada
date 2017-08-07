@@ -17,7 +17,7 @@ class FridaProcess():
 
     def run(self):
         print '[*] Starting Frida server'
-        self.process = subprocess.Popen(self.start_args, shell=True, preexec_fn=os.setsid)
+        self.process = subprocess.Popen(self.start_args, stdin=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
         time.sleep(1)
         
     def terminate(self):
