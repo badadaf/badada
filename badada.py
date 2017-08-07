@@ -2,12 +2,14 @@
 
 import argparse
 import frida
+import multiprocessing
 import os.path
 import sys
 import time
 from cmd import Cmd as sCmd
 from os import system
 from subprocess import check_output as cmd
+import subprocess
 
 
 class BadadaShell(sCmd):
@@ -44,6 +46,12 @@ class BadadaShell(sCmd):
 
         print '[*] Ensuring adb server is running'    
         cmd(['adb', 'start-server'])
+        #subprocess.Popen('adb shell "/data/local/tmp/frida-server &"', shell=True)
+        fridaServerProcess = multiprocessing.Process(target=self.startOrStopFridaServer, args=('start',))
+        fridaServerProcess.start()
+        time.sleep(1)
+
+
 
         print '[*] Attaching USB Device'
 
@@ -83,6 +91,12 @@ class BadadaShell(sCmd):
                 self.script = None
                 self.args.javascript = None
 
+
+    def startOrStopFridaServer(self, status):
+        if status is 'start':
+            subprocess.call(['adb', 'shell', '"/data/local/tmp/frida-server"', '"&"'])
+        elif status is 'stop':
+            subprocess.call("adb shell kill -9 \`pidof frida-server\`")
 
     def emptyline(self):
         pass
@@ -149,6 +163,7 @@ class BadadaShell(sCmd):
 
         print '[*] Detaching current session.'
         self.session.detach()
+        self.startOrStopFridaServer('stop')
         print '[*] Exiting...\n' + '[*] Thanks for using Badada! ' + 'Bye \\o/'
         raise SystemExit
 
