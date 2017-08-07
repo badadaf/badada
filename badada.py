@@ -66,9 +66,17 @@ class BadadaShell(cmd.Cmd):
         print '[*] Ensuring adb server is running'    
         subprocess.call(['adb', 'start-server'])
   
-        self.frida_server = FridaProcess()
-        self.frida_server.run()
+        #self.frida_server = FridaProcess()
+        #self.frida_server.run()
+        
+        if os.system('adb shell "[ -f /data/local/tmp/frida-server ]"') is not 0:
+            print '[-] frida-server does not exist in /data/local/tmp/frida-server'
+            sys.exit(0)
 
+        print '[*] Starting frida-server'
+        os.system('adb shell killall frida-server >/dev/null 2>&1')
+        os.system('adb shell "/data/local/tmp/frida-server" &')
+        time.sleep(1)
         print '[*] Attaching USB Device'
 
         try:
@@ -76,11 +84,11 @@ class BadadaShell(cmd.Cmd):
 
         except frida.TimedOutError:
             print '[-] Failed to attach to USB Device.'
-            exit(1)
+            sys.exit(1)
 
         if(not self.usbDevice):
             print '[-] Failed to attach to USB Device.'
-            exit(1)
+            sys.exit(1)
 
         print '[*] Attaching to ' + self.args.processToHook + " process"
 
@@ -88,10 +96,11 @@ class BadadaShell(cmd.Cmd):
             self.session = self.usbDevice.attach(self.args.processToHook)
         except frida.ServerNotRunningError:
             print '[-] Unable to connect to frida-server.'
-            exit(1)
+            sys.exit(1)
+
         except frida.ProcessNotFoundError:
             print '[-] Unable to find ' + self.args.processToHook + ' to attach.'
-            exit(1)
+            sys.exit(1)
 
 
         print '[*] Loading default RPC methods'
@@ -180,8 +189,10 @@ class BadadaShell(cmd.Cmd):
         print '[*] Detaching current session.'
         self.session.detach()
         
-        self.frida_server.terminate()
+        #self.frida_server.terminate()
         #self.startOrStopFridaServer('stop')
+        print '[*] Stopping frida-server...'
+        os.system('adb shell killall frida-server >/dev/null 2>&1')
         print '[*] Exiting...\n' + '[*] Thanks for using Badada! ' + 'Bye \\o/'
         raise SystemExit
 
@@ -295,7 +306,7 @@ class BadadaShell(cmd.Cmd):
                 self.args.javascript = None
             except frida.ServerNotRunningError:
                 print '[-] Unable to connect to frida-server.'
-                exit(1)
+                sys.exit(1)
             except frida.ProcessNotFoundError:
                 print '[-] Unable to find the process to attach.'
 
