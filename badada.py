@@ -2,17 +2,36 @@
 
 import argparse
 import frida
-import multiprocessing
-import os.path
 import sys
 import time
-from cmd import Cmd as sCmd
-from os import system
-from subprocess import check_output as cmd
 import subprocess
+import os
+import signal
+import cmd
 
+class FridaProcess():
+    def __init__(self, args = ['adb shell /data/local/tmp/frida-server', 'adb shell killall frida-server']):
+        self.start_args = args[0]
+        self.stop_args = args[1]
+        self.process = None
 
-class BadadaShell(sCmd):
+    def run(self):
+        print '[*] Starting Frida server'
+        self.process = subprocess.Popen(self.start_args, shell=True, preexec_fn=os.setsid)
+        time.sleep(1)
+        
+    def terminate(self):
+        os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+        time.sleep(1)
+        print '[*] Terminated Frida server.'
+
+    def pool(self):
+        if self.process is not None:
+            return self.process.pool()
+        
+        return None
+
+class BadadaShell(cmd.Cmd):
 
     defaultRPCMethods = None
     args = None
@@ -23,7 +42,7 @@ class BadadaShell(sCmd):
 
     def __init__(self):
 
-        sCmd.__init__(self)
+        cmd.Cmd.__init__(self)
 
         self.aliases = {
             'exit'  : self.do_quit
@@ -45,13 +64,10 @@ class BadadaShell(sCmd):
             """ + '\033[0m'
 
         print '[*] Ensuring adb server is running'    
-        cmd(['adb', 'start-server'])
-        #subprocess.Popen('adb shell "/data/local/tmp/frida-server &"', shell=True)
-        fridaServerProcess = multiprocessing.Process(target=self.startOrStopFridaServer, args=('start',))
-        fridaServerProcess.start()
-        time.sleep(1)
-
-
+        subprocess.call(['adb', 'start-server'])
+  
+        self.frida_server = FridaProcess()
+        self.frida_server.run()
 
         print '[*] Attaching USB Device'
 
@@ -102,9 +118,9 @@ class BadadaShell(sCmd):
         pass
 
     def default(self, line):
-        cmd, arg, line = self.parseline(line)
-        if cmd in self.aliases:
-            self.aliases[cmd](arg)
+        command, arg, line = self.parseline(line)
+        if command in self.aliases:
+            self.aliases[command](arg)
         else:
             print '[-] Command not found'
 
@@ -163,7 +179,9 @@ class BadadaShell(sCmd):
 
         print '[*] Detaching current session.'
         self.session.detach()
-        self.startOrStopFridaServer('stop')
+        
+        self.frida_server.terminate()
+        #self.startOrStopFridaServer('stop')
         print '[*] Exiting...\n' + '[*] Thanks for using Badada! ' + 'Bye \\o/'
         raise SystemExit
 
@@ -191,7 +209,7 @@ class BadadaShell(sCmd):
         print '\neloads current script for changes\n'
 
     def do_ls(self, inArgs):
-        system('ls ' + inArgs)
+        os.system('ls ' + inArgs)
 
     def do_load(self, inArgs):
         args = inArgs.strip().split(" ")
@@ -244,7 +262,7 @@ class BadadaShell(sCmd):
         print '\n'.join(['Show all methods from <class_name> [<contains_this>]'])
 
     def do_clear(self, inArgs):
-        system('cls||clear')
+        os.system('cls||clear')
 
     def help_clear(self):
         print '\n'.join(['Clears the terminal screen.'])
