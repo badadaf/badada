@@ -53,6 +53,7 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('processToHook', help='Name of the process to be attached')
         parser.add_argument('--javascript', help='Path to javascript code file to inject')
         parser.add_argument('--log', help='Save output to path')
+        parser.add_argument('--gadget', action='store_true', help='Search for the gadget instead of frida-server')
         self.args = parser.parse_args()
         self.log = self.args.log
 
@@ -67,13 +68,14 @@ class BadadaShell(cmd.Cmd):
         print '[*] Ensuring adb server is running'    
         subprocess.call(['adb', 'start-server'])
   
-        self.frida_server = FridaProcess()
-        self.frida_server.run()
-        
-        if os.system('adb shell "[ -f /data/local/tmp/frida-server ]"') is not 0:
-            print '[-] frida-server does not exist in /data/local/tmp/frida-server'
-            sys.exit(0)
+        if not self.args.gadget:
+            if subprocess.check_output(['adb shell "[ -f /data/local/tmp/frida-server ]; echo \\$?"'], shell=True).strip() is not '0':
+                print '[-] frida-server does not exist in /data/local/tmp/frida-server'
+                sys.exit(0)
 
+            self.frida_server = FridaProcess()
+            self.frida_server.run()
+        
         print '[*] Attaching USB Device'
 
         try:
@@ -86,11 +88,16 @@ class BadadaShell(cmd.Cmd):
         if(not self.usbDevice):
             print '[-] Failed to attach to USB Device.'
             sys.exit(1)
-
-        print '[*] Attaching to ' + self.args.processToHook + " process"
-
+        
         try:
-            self.session = self.usbDevice.attach(self.args.processToHook)
+            # If is digit, attach to pid
+            if self.args.processToHook.isdigit():
+                print '[*] Attaching to ' + self.args.processToHook + " pid"
+                self.session = self.usbDevice.attach(int(self.args.processToHook))
+            else:
+                print '[*] Attaching to ' + self.args.processToHook + " process"
+                self.session = self.usbDevice.attach(self.args.processToHook)
+
         except frida.ServerNotRunningError:
             print '[-] Unable to connect to frida-server.'
             sys.exit(1)
@@ -186,7 +193,9 @@ class BadadaShell(cmd.Cmd):
         print '[*] Detaching current session.'
         self.session.detach()
         
-        self.frida_server.terminate()
+        if not self.args.gadget:
+            self.frida_server.terminate()
+    
         print '[*] Exiting...\n' + '[*] Thanks for using Badada! ' + 'Bye \\o/'
         raise SystemExit
 
