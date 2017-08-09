@@ -2,12 +2,21 @@
 
 rpc.exports = {
     // getClasses that containsThis
+
     getclasses: function(containsThis) {
         Java.perform(function() {
-            var classes = Java.enumerateLoadedClassesSync();
+            //var classes = Java.enumerateLoadedClassesSync();
+            var classes = [];
+            Java.enumerateLoadedClasses({
+                onMatch: function(entry) {
+                    classes.push(entry);
+                },
+                onComplete: function (){
+                    send("Enumerating classes");
+                }
+            });
 
             for (var i = 0; i < classes.length; i++) {
-                //if (classes[i].toString().toLowerCase().indexOf(containsThis.toLowerCase()) != -1) {
                 if (classes[i].toString().toLowerCase().search(containsThis.toLowerCase()) != -1) {
                     send(classes[i].toString());
                 }
