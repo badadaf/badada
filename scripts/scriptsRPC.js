@@ -7,7 +7,8 @@ rpc.exports = {
             var classes = Java.enumerateLoadedClassesSync();
 
             for (var i = 0; i < classes.length; i++) {
-                if (classes[i].toString().toLowerCase().indexOf(containsThis.toLowerCase()) != -1) {
+                //if (classes[i].toString().toLowerCase().indexOf(containsThis.toLowerCase()) != -1) {
+                if (classes[i].toString().toLowerCase().search(containsThis.toLowerCase()) != -1) {
                     send(classes[i].toString());
                 }
             }
@@ -45,7 +46,7 @@ rpc.exports = {
             {
                 var methodSignature = methods[i].toGenericString();
 
-                if (methodSignature.toString().toLowerCase().indexOf(containsThis.toLowerCase()) == -1) {
+                if (methodSignature.toString().toLowerCase().search(containsThis.toLowerCase()) == -1) {
                     continue;
                 }
                 var initParenthesis = 0;
