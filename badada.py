@@ -190,8 +190,12 @@ class BadadaShell(cmd.Cmd):
     def do_quit(self, inArgs):
         if self.defaultRPCMethods:
             print '[*] Unloading default RPC methods'
-            self.defaultRPCMethods.unload()
-            self.defaultRPCMethods = None
+            try:
+                self.defaultRPCMethods.unload()
+            except frida.InvalidOperationError as err:
+                pass
+            finally:
+                self.defaultRPCMethods = None
 
         if self.script:
             print '[*] Unloading current script...'
@@ -299,8 +303,12 @@ class BadadaShell(cmd.Cmd):
             
             if self.defaultRPCMethods:
                 print '[*] Unloading default RPC methods'
-                self.defaultRPCMethods.unload()
-                self.defaultRPCMethods = None
+                try:
+                    self.defaultRPCMethods.unload()
+                except frida.InvalidOperationError as err:
+                    pass
+                finally:
+                    self.defaultRPCMethods = None
 
             if self.args.javascript:
                 print '[*] Unloading current script...'
@@ -332,8 +340,9 @@ if __name__ == '__main__':
     prompt.prompt = '\033[1m' + '\033[92m' + 'badada> ' + '\033[0m'
     try:
         prompt.cmdloop()
-    except (KeyboardInterrupt, frida.InvalidOperationError) as e:
+    except (frida.InvalidOperationError) as err:
+        print 'Error: ' + err
+    except KeyboardInterrupt as err:
         print ''
-        prompt.do_quit(None)
     finally:
-        prompt.frida_server.terminate()
+        prompt.do_quit(None)
