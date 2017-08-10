@@ -20,11 +20,14 @@ class FridaProcess():
         print '[*] Starting Frida server'
         self.process = subprocess.Popen(self.start_args, stdin=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
         time.sleep(1)
+
         
     def terminate(self):
-        os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
-        time.sleep(1)
-        print '[*] Terminated Frida server.'
+        if self.process is not None:
+            os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+            time.sleep(1)
+            self.process = None
+            print '[*] Terminated Frida server.'
 
     def pool(self):
         if self.process is not None:
@@ -54,6 +57,7 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('--javascript', help='Path to javascript code file to inject')
         parser.add_argument('--log', help='Save output to path')
         parser.add_argument('--gadget', action='store_true', help='Search for the gadget instead of frida-server')
+        parser.add_argument('--zygote', help='Frida injects into Zygote, spawns processToHook and waits for input. Similar to running Frida with -f flag')
         self.args = parser.parse_args()
         self.log = self.args.log
 
@@ -71,7 +75,8 @@ class BadadaShell(cmd.Cmd):
         if not self.args.gadget:
             if subprocess.check_output(['adb shell "[ -f /data/local/tmp/frida-server ]; echo \\$?"'], shell=True).strip() is not '0':
                 print '[-] frida-server does not exist in /data/local/tmp/frida-server'
-                sys.exit(0)
+                #sys.exit(0)
+                return
 
             self.frida_server = FridaProcess()
             self.frida_server.run()
@@ -83,11 +88,13 @@ class BadadaShell(cmd.Cmd):
 
         except frida.TimedOutError:
             print '[-] Failed to attach to USB Device.'
-            sys.exit(1)
+            #sys.exit(1)
+            return
 
         if(not self.usbDevice):
             print '[-] Failed to attach to USB Device.'
-            sys.exit(1)
+            #sys.exit(1)
+            return
         
         try:
             # If is digit, attach to pid
@@ -100,12 +107,13 @@ class BadadaShell(cmd.Cmd):
 
         except frida.ServerNotRunningError:
             print '[-] Unable to connect to frida-server.'
-            sys.exit(1)
+            #sys.exit(1)
+            return
 
         except frida.ProcessNotFoundError:
             print '[-] Unable to find ' + self.args.processToHook + ' to attach.'
-            sys.exit(1)
-
+            #sys.exit(1)
+            return
 
         print '[*] Loading default RPC methods'
         self.defaultRPCMethods = self.loadScript(os.path.join(os.path.dirname(__file__), 'scripts/', 'scriptsRPC.js'), self.session)
@@ -191,7 +199,8 @@ class BadadaShell(cmd.Cmd):
             self.script = None
 
         print '[*] Detaching current session.'
-        self.session.detach()
+        if self.session is not None:
+            self.session.detach()
         
         if not self.args.gadget:
             self.frida_server.terminate()
@@ -309,7 +318,8 @@ class BadadaShell(cmd.Cmd):
                 self.args.javascript = None
             except frida.ServerNotRunningError:
                 print '[-] Unable to connect to frida-server.'
-                sys.exit(1)
+                #sys.exit(1)
+                return
             except frida.ProcessNotFoundError:
                 print '[-] Unable to find the process to attach.'
 
@@ -322,6 +332,8 @@ if __name__ == '__main__':
     prompt.prompt = '\033[1m' + '\033[92m' + 'badada> ' + '\033[0m'
     try:
         prompt.cmdloop()
-    except KeyboardInterrupt as e:
+    except (KeyboardInterrupt, frida.InvalidOperationError) as e:
         print ''
         prompt.do_quit(None)
+    finally:
+        prompt.frida_server.terminate()
