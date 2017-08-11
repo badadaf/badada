@@ -129,12 +129,6 @@ class BadadaShell(cmd.Cmd):
                 self.args.javascript = None
 
 
-    def startOrStopFridaServer(self, status):
-        if status is 'start':
-            subprocess.call(['adb', 'shell', '"/data/local/tmp/frida-server"', '"&"'])
-        elif status is 'stop':
-            subprocess.call("adb shell kill -9 \`pidof frida-server\`")
-
     def emptyline(self):
         pass
 
