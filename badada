@@ -244,7 +244,7 @@ class BadadaShell(cmd.Cmd):
             print '\n[-] Usage load [<script.js>]\n'
 
         else:
-            if self.args.javascript:
+            if self.args.javascript and self.script:
                 print '[*] Unloading current script...'
                 self.script.unload()
                 self.script = None
@@ -345,4 +345,5 @@ if __name__ == '__main__':
     except KeyboardInterrupt as err:
         print ''
     finally:
+        print 'oops'
         prompt.do_quit(None)
