@@ -244,6 +244,14 @@ class BadadaShell(cmd.Cmd):
     def help_reload(self):
         print '\neloads current script for changes\n'
 
+    def do_unload(self, inArgs):
+        if self.args.javascript and self.script:
+            print '[*] Unloading current script...'
+            self.script.unload()
+            self.script = None
+        else:
+            print '[-] There is no script to unload'
+
     def do_load(self, inArgs):
         args = inArgs.strip().split(" ")
         if(len(args) != 1 or len(args[0]) == 0):
@@ -350,5 +358,7 @@ if __name__ == '__main__':
         print 'Error: ' + err
     except KeyboardInterrupt as err:
         print ''
+    except Exception, e:
+        print 'Unknown Exception: ' + e
     finally:
         prompt.do_quit(None)
