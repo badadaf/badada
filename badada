@@ -56,11 +56,10 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('processToHook', help='Name of the process to be attached')
         parser.add_argument('--javascript', help='Path to javascript code file to inject')
         parser.add_argument('--log', help='Save output to path')
-        parser.add_argument('--gadget', action='store_true', help='Search for the gadget instead of frida-server')
         parser.add_argument('--zygote', help='Frida injects into Zygote, spawns processToHook and waits for input. Similar to running Frida with -f flag')
         self.args = parser.parse_args()
         self.log = self.args.log
-
+        
         print '\033[1m' + '\033[94m' + """                 ____          _____          _____          
                 |  _ \   /\   |  __ \   /\   |  __ \   /\    
                 | |_) | /  \  | |  | | /  \  | |  | | /  \   
@@ -72,7 +71,8 @@ class BadadaShell(cmd.Cmd):
         print '[*] Ensuring adb server is running'    
         subprocess.call(['adb', 'start-server'])
   
-        if not self.args.gadget:
+        if self.args.processToHook != 'Gadget':
+            print 'P: '+ self.args.processToHook
             if subprocess.check_output(['adb shell "[ -f /data/local/tmp/frida-server ]; echo \\$?"'], shell=True).strip() is not '0':
                 print '[-] frida-server does not exist in /data/local/tmp/frida-server'
                 #sys.exit(0)
@@ -215,7 +215,7 @@ class BadadaShell(cmd.Cmd):
         if self.session is not None:
             self.session.detach()
         
-        if not self.args.gadget:
+        if self.args.processToHook != 'Gadget':
             self.frida_server.terminate()
     
         print '[*] Exiting...\n' + '[*] Thanks for using Badada! ' + 'Bye \\o/'
@@ -358,7 +358,5 @@ if __name__ == '__main__':
         print 'Error: ' + err
     except KeyboardInterrupt as err:
         print ''
-    except Exception, e:
-        print 'Unknown Exception: ' + e
     finally:
         prompt.do_quit(None)
