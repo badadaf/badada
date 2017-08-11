@@ -134,7 +134,10 @@ class BadadaShell(cmd.Cmd):
 
     def default(self, line):
         command, arg, line = self.parseline(line)
-        if command in self.aliases:
+
+        if line[0] is '!':
+            os.system(line[1:])
+        elif command in self.aliases:
             self.aliases[command](arg)
         else:
             print '[-] Command not found'
@@ -173,12 +176,24 @@ class BadadaShell(cmd.Cmd):
         return self.script
 
     def getClasses(self, containsText, defaultRPCMethods):
+        if not self.defaultRPCMethods:
+            print '[-] Seems that there is no hook'
+            return
+
         self.defaultRPCMethods.exports.getclasses(containsText)
 
     def getMethodsWithSignature(self, className, containsText, defaultRPCMethods):
+        if not self.defaultRPCMethods:
+            print '[-] Seems that there is no hook'
+            return
+
         self.defaultRPCMethods.exports.getmethods(className, containsText)
 
     def searchMethod(self, methodName, defaultRPCMethods):
+        if not self.defaultRPCMethods:
+            print '[-] Seems that there is no hook'
+            return
+      
         self.defaultRPCMethods.exports.searchmethod(methodName)
 
     def do_quit(self, inArgs):
@@ -228,9 +243,6 @@ class BadadaShell(cmd.Cmd):
 
     def help_reload(self):
         print '\neloads current script for changes\n'
-
-    def do_ls(self, inArgs):
-        os.system('ls ' + inArgs)
 
     def do_load(self, inArgs):
         args = inArgs.strip().split(" ")
@@ -304,7 +316,7 @@ class BadadaShell(cmd.Cmd):
                 finally:
                     self.defaultRPCMethods = None
 
-            if self.args.javascript:
+            if self.args.javascript and self.script:
                 print '[*] Unloading current script...'
                 self.script.unload()
                 self.script = None
