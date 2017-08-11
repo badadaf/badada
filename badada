@@ -244,7 +244,7 @@ class BadadaShell(cmd.Cmd):
             self.script = None
 
     def help_reload(self):
-        print '\neloads current script for changes\n'
+        print '\nReloads current script for changes\n'
 
     def do_unload(self, inArgs):
         if self.args.javascript and self.script:
