@@ -72,7 +72,8 @@ class BadadaShell(cmd.Cmd):
         subprocess.call(['adb', 'start-server'])
  
         print '[*] Ensuring frida-server is not running'
-        os.system('adb shell killall frida-server > /dev/null 2>&1')        
+        os.system('adb shell killall -9 frida-server > /dev/null 2>&1')        
+        time.sleep(0.5)
 
         if self.args.processToHook != 'Gadget':
             if subprocess.check_output(['adb shell "[ -f /data/local/tmp/frida-server ]; echo \\$?"'], shell=True).strip() is not '0':
