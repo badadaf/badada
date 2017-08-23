@@ -56,7 +56,7 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('processToHook', help='Name of the process to be attached')
         parser.add_argument('--javascript', help='Path to javascript code file to inject')
         parser.add_argument('--log', help='Save output to path')
-        parser.add_argument('--zygote', help='Frida injects into Zygote, spawns processToHook and waits for input. Similar to running Frida with -f flag')
+        parser.add_argument('--zygote', action='store_true', help='Frida injects into Zygote, spawns processToHook and waits for input. Similar to running Frida with -f flag')
         self.args = parser.parse_args()
         self.log = self.args.log
         
@@ -101,7 +101,17 @@ class BadadaShell(cmd.Cmd):
         
         try:
             # If is digit, attach to pid
-            if self.args.processToHook.isdigit():
+            if self.args.zygote:
+                if self.args.processToHook.isdigit():
+                    print '[-] To spawn the process you must pass the process name'
+                    return
+
+                print '[*] Spawning %s' %(self.args.processToHook)
+                pid = self.usbDevice.spawn([self.args.processToHook])
+
+                print '[*] Attaching to %s' %(self.args.processToHook)
+                self.session = self.usbDevice.attach(pid)
+            elif self.args.processToHook.isdigit():
                 print '[*] Attaching to ' + self.args.processToHook + " pid"
                 self.session = self.usbDevice.attach(int(self.args.processToHook))
             else:
@@ -126,6 +136,9 @@ class BadadaShell(cmd.Cmd):
             print '[*] Loading %s' %(self.args.javascript) 
             try:
                 self.script = self.loadScript(self.args.javascript, self.session)
+
+                if self.args.zygote:
+                    self.usbDevice.resume(pid)
             except IOError as e:
                 print '[-] Unable to load script "' + self.args.javascript + '": file not found.'
                 self.script = None
