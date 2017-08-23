@@ -226,12 +226,21 @@ class BadadaShell(cmd.Cmd):
 
         if self.script:
             print '[*] Unloading current script...'
-            self.script.unload()
-            self.script = None
+            try:
+                self.script.unload()
+            except frida.InvalidOperationError as err:
+                pass
+            finally:
+               self.script = None
 
         print '[*] Detaching current session.'
         if self.session is not None:
-            self.session.detach()
+            try:
+                self.session.detach()
+            except frida.InvalidOperationError as err:
+                pass
+            finally:
+                self.session = None
         
         if self.args.processToHook != 'Gadget':
             self.frida_server.terminate()
