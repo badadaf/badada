@@ -20,7 +20,6 @@ class FridaProcess():
         print '[*] Starting Frida server'
         self.process = subprocess.Popen(self.start_args, stdin=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
         time.sleep(1)
-
         
     def terminate(self):
         if self.process is not None:
@@ -70,7 +69,7 @@ class BadadaShell(cmd.Cmd):
 
         print '[*] Ensuring adb server is running'    
         subprocess.call(['adb', 'start-server'])
- 
+
         print '[*] Ensuring frida-server is not running'
         os.system('adb shell killall -9 frida-server > /dev/null 2>&1')        
         time.sleep(0.5)
@@ -371,8 +370,11 @@ if __name__ == '__main__':
     try:
         prompt.cmdloop()
     except (frida.InvalidOperationError) as err:
-        print 'Error: ' + err
+        print '[-] ' + err.message
+        prompt.do_quit(None)
     except KeyboardInterrupt as err:
-        print ''
-    finally:
+        print '[*] CTRL+C detected...'
+        prompt.do_quit(None)
+    except Exception as e:
+        print '[-] %s' %(e.message) 
         prompt.do_quit(None)
