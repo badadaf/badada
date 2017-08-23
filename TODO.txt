@@ -24,4 +24,4 @@ import json
 import requests
 
 
-    
+Handle multiple devices connected    
