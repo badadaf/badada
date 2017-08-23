@@ -213,8 +213,8 @@ class BadadaShell(cmd.Cmd):
             return
       
         self.defaultRPCMethods.exports.searchmethod(methodName)
-
-    def do_quit(self, inArgs):
+    
+    def cleanup(self, inArgs):
         if self.defaultRPCMethods:
             print '[*] Unloading default RPC methods'
             try:
@@ -243,9 +243,15 @@ class BadadaShell(cmd.Cmd):
                 self.session = None
         
         if self.args.processToHook != 'Gadget':
-            self.frida_server.terminate()
+            try:
+                self.frida_server.terminate()
+            except Exception as e:
+                pass
     
         print '[*] Exiting...\n' + '[*] Thanks for using Badada! ' + 'Bye \\o/'
+
+
+    def do_quit(self, inArgs):
         raise SystemExit
 
     def help_quit(self):
@@ -381,12 +387,9 @@ if __name__ == '__main__':
     prompt.prompt = '\033[1m' + '\033[92m' + 'badada> ' + '\033[0m'
     try:
         prompt.cmdloop()
-    except (frida.InvalidOperationError) as err:
-        print '[-] %s' %(err.message.capitalize())
-        prompt.do_quit(None)
     except KeyboardInterrupt as err:
         print '[*] CTRL+C detected...'
-        prompt.do_quit(None)
     except Exception as e:
         print '[-] %s' %(e.message.capitalize())
-        prompt.do_quit(None)
+    finally:
+        prompt.cleanup(None)
