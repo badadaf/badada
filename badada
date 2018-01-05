@@ -111,8 +111,9 @@ class BadadaShell(cmd.Cmd):
                 print '[*] Spawning %s' %(self.args.processToHook)
                 pid = self.usbDevice.spawn([self.args.processToHook])
 
+
                 print '[*] Attaching to %s' %(self.args.processToHook)
-                self.session = self.usbDevice.attach(pid)
+                self.session = self.usbDevice.spawn(pid)
             elif self.args.processToHook.isdigit():
                 print '[*] Attaching to ' + self.args.processToHook + " pid"
                 self.session = self.usbDevice.attach(int(self.args.processToHook))
@@ -138,7 +139,7 @@ class BadadaShell(cmd.Cmd):
             print '[*] Loading %s' %(self.args.javascript) 
             try:
                 self.script = self.loadScript(self.args.javascript, self.session)
-
+                time.sleep(1)
                 if self.args.zygote:
                     self.usbDevice.resume(pid)
             except IOError as e:
