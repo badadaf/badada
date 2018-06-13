@@ -309,7 +309,7 @@ class BadadaShell(cmd.Cmd):
     def help_load(self):
         print '\nLoads a javascript code to be injected.\n'
 
-    def do_getclasses(self, inArgs):
+    def do_classes(self, inArgs):
         args = inArgs.strip().split(" ")
         if(len(args) > 1):
                 print '\n[-] Usage getclasses [<contains_this>]'
@@ -320,10 +320,10 @@ class BadadaShell(cmd.Cmd):
         else:
             self.getClasses(args[0], self.defaultRPCMethods)
 
-    def help_getclasses(self):
+    def help_classes(self):
         print '\n'.join(['Show all classes filtered by [<contains_this>]'])
 
-    def do_getmethods(self, inArgs):
+    def do_methods(self, inArgs):
         args = inArgs.strip().split(" ")
         if(len(args) < 1):
             print '\n[-] Usage: getmethods <className> [<contains_this>]\n'
@@ -333,7 +333,7 @@ class BadadaShell(cmd.Cmd):
         else:
             self.getMethodsWithSignature(args[0], args[1], self.defaultRPCMethods)
 
-    def help_getmethods(self):
+    def help_methods(self):
         print '\n'.join(['Show all methods from <class_name> [<contains_this>]'])
 
     def do_clear(self, inArgs):
