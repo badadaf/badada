@@ -2,52 +2,62 @@
 
 rpc.exports = {
     // getClasses that containsThis
-
     getclasses: function(containsThis) {
         Java.perform(function() {
-            //var classes = Java.enumerateLoadedClassesSync();
-            var classes = [];
+            send("[*] Enumerating classes...");
             Java.enumerateLoadedClasses({
                 onMatch: function(entry) {
-                    classes.push(entry);
+                    if (entry.toString().toLowerCase().search(containsThis.toLowerCase()) != -1) {
+                        send(entry.toString());
+                    }
                 },
                 onComplete: function (){
-                    send("Enumerating classes");
+                    send("[*] Done!");
                 }
             });
-
-            for (var i = 0; i < classes.length; i++) {
-                if (classes[i].toString().toLowerCase().search(containsThis.toLowerCase()) != -1) {
-                    send(classes[i].toString());
-                }
-            }
         });
     },
-    // Search Methods
+
+    // Search Methods in all classes
     searchmethod: function(methodToSearch){
         Java.perform(function(){
-            send("Searching for " + methodToSearch);
-            var classes = Java.enumerateLoadedClassesSync();
-            
-            for(var i = 0; i < classes.length; i++){
-                var classX = Java.use(classes[i].toString());
+            send("[*] Searching for " + methodToSearch);
+            send("[*] This can take some time...");
 
-                var methods = classX.class.getDeclaredMethods();
-                
-                for(var j = 0; j < methods.length; j++){
-                    var methodName = methods[j].getName();
-
-                    if(methodName.indexOf(methodToSearch) != -1){
-                        send(classX.toString());
+            Java.enumerateLoadedClasses({
+                onMatch: function(entry) {
+                    try{
+                        var classX = Java.use(entry.toString());
+                    } catch(err){
+                        send("[!] Class not found: " + entry.toString());
+                        return;
                     }
+
+                    var methods = classX.class.getDeclaredMethods();
+
+                    for(var j = 0; j < methods.length; j++){
+                        var methodName = methods[j].toGenericString();
+
+                        if(methodName.toLowerCase().search(methodToSearch.toLowerCase()) != -1){
+                            send("[*] FOUND HERE - " + classX.toString());
+                        }
+                    }
+                },
+                onComplete: function (){
+                    send("[*] Done!");
                 }
-            }
+            });
         });
     },
 
     getmethods: function(nameOfClass, containsThis){
         Java.perform(function(){
-            var className = Java.use(nameOfClass);
+            try{
+                var className = Java.use(nameOfClass);
+            } catch(err){
+                send("[!] Class not found: " + nameOfClass);
+                return;
+            }
 
             var methods = className.class.getDeclaredMethods();
 
@@ -104,7 +114,6 @@ rpc.exports = {
                 send(newMethodSignature);
             }
         });
-
     }
 };
 
