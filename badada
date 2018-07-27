@@ -322,6 +322,10 @@ class BadadaShell(cmd.Cmd):
         else:
             self.get_classes(args[0])
 
+    @staticmethod
+    def help_searchmethod():
+        print('\n'.join(['Iterate in all classes, looking for a specific method']))
+
     def do_searchmethod(self, method_name):
         if not method_name:
             print('\nYou have to specify a method to search for')
