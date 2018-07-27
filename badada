@@ -54,6 +54,8 @@ class BadadaShell(cmd.Cmd):
                                                                   'and waits for input. Similar to running '
                                                                   'Frida with -f flag')
 
+        parser.add_argument('--activity', help='Specify which activity you want to spawn')
+
         self.args = parser.parse_args()
         self.log = self.args.log
         
@@ -99,13 +101,23 @@ class BadadaShell(cmd.Cmd):
         try:
             # If is digit, attach to pid
             pid = None
+
+            if self.args.activity and not self.args.spawn:
+                print('[-] The --activity option just makes sense when using --spawn')
+                return
+
             if self.args.spawn:
                 if self.args.processToHook.isdigit():
                     print('[-] To spawn the process you must pass the process name')
                     return
 
-                print('[*] Spawning %s' % (self.args.processToHook))
-                pid = self.usb_device.spawn([self.args.processToHook])
+                if not self.args.activity:
+                    print('[*] Spawning %s' % (self.args.processToHook))
+                    pid = self.usb_device.spawn([self.args.processToHook])
+
+                else:
+                    print('[*] Spawning %s in "%s" activity' % (self.args.processToHook, self.args.activity))
+                    pid = self.usb_device.spawn(self.args.processToHook, activity=self.args.activity)
 
                 print('[*] Attaching to %s' % (self.args.processToHook))
                 self.session = self.usb_device.attach(pid)
