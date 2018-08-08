@@ -16,7 +16,7 @@ class FridaProcess:
 
     @staticmethod
     def run():
-        cmd_check_frida = 'adb shell "ps -ef" | grep frida-serve | wc -l'
+        cmd_check_frida = 'adb shell "ps -ef" | grep frida-server | wc -l'
         cmd_start_frida_daemon = 'adb shell "/data/local/tmp/frida-server -D"'
 
         if subprocess.check_output([cmd_check_frida], shell=True).strip() is '0':
@@ -38,6 +38,8 @@ class BadadaShell(cmd.Cmd):
     script = None
     log = None
     usb_device = None
+    child_gating_hooks = {}
+    child_gating_sessions = set()
 
     def __init__(self):
         cmd.Cmd.__init__(self)
@@ -51,10 +53,13 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('-j', '--javascript', help='Path to javascript code file to inject')
         parser.add_argument('--log', help='Save output to path')
         parser.add_argument('--spawn', action='store_true', help='Frida injects into Zygote, spawns processToHook '
-                                                                  'and waits for input. Similar to running '
-                                                                  'Frida with -f flag')
+                                                                 'and waits for input. Similar to running '
+                                                                 'Frida with -f flag')
 
         parser.add_argument('--activity', help='Specify which activity you want to spawn')
+        parser.add_argument('--child-gating', action='store_true', help='Monitor the chidren of a process')
+        parser.add_argument('--child-gating-args', help='Specify the arguments of '
+                                                        'child gating feature')
 
         self.args = parser.parse_args()
         self.log = self.args.log
@@ -97,10 +102,20 @@ class BadadaShell(cmd.Cmd):
         if not self.usb_device:
             print('[-] Failed to attach to USB Device.')
             return
-        
+
         try:
             # If is digit, attach to pid
             pid = None
+
+            if self.args.child_gating_args and not self.args.child_gating:
+                print('[-] The --child-gating-args option just makes sense when using --child-gating')
+                return
+
+            if self.args.child_gating and self.args.child_gating_args:
+                self.parse_child_gating_args()
+
+            if self.args.child_gating:
+                self.usb_device.on('child-added', lambda child: self.on_child_added(child))
 
             if self.args.activity and not self.args.spawn:
                 print('[-] The --activity option just makes sense when using --spawn')
@@ -138,6 +153,9 @@ class BadadaShell(cmd.Cmd):
             print('[-] Unable to find ' + self.args.processToHook + ' to attach.')
             return
 
+        if self.args.child_gating:
+            self.session.enable_child_gating()
+
         print('[*] Loading default RPC methods')
         self.default_rpc_methods = self.load_script(os.path.join(
             os.path.dirname(__file__), 'scripts/', 'scriptsRPC.js'))
@@ -158,6 +176,54 @@ class BadadaShell(cmd.Cmd):
             print('[*] Resuming %s' % (self.args.processToHook))
             time.sleep(1)
             self.usb_device.resume(pid)
+
+    def parse_child_gating_args(self):
+        print('[*] Parsing Child Gating Args...')
+
+        dict_hooks = {}
+        try:
+            args = self.args.child_gating_args.split(' ')
+
+            for arg in args:
+                app, hook_file = arg.split('=')
+
+                if not os.path.isfile(hook_file):
+                    print('[-] File %s not found' % (hook_file))
+                    raise Exception('Argument Parsing error')
+
+                dict_hooks[app] = hook_file
+
+        except Exception:
+            print('[-] Error while parsing --child-gating-args')
+            print('How to use --child-gating-args:')
+            print("badada process_to_hook --child-gating "
+                  "--child-gating-args='org.mozilla.firefox=firefoxhook.js com.android.chrome=chromehook.js'")
+
+            dict_hooks = {}
+
+        self.child_gating_hooks = dict_hooks
+
+    def on_child_removed(self, reason, session, child):
+        print('\n[*] Child Removed (%s): %s' % (reason, child.identifier))
+        self.child_gating_sessions.remove(session)
+
+    def on_child_added(self, child):
+        print('\n[*] New Child: %s (PID: %s | PPID: %s)' % (child.identifier, child.pid, child.parent_pid))
+
+        if child.identifier in self.child_gating_hooks.keys():
+            print('[*] Hooking %s' % (child.identifier))
+            session = self.usb_device.attach(child.pid)
+            session.on('detached', lambda reason: self.on_child_removed(reason, session, child))
+            session.enable_child_gating()
+
+            hook_source = self.get_file_contents(self.child_gating_hooks[child.identifier])
+            self.script = session.create_script(hook_source)
+            self.script.on('message', self.on_message)
+            self.script.load()
+
+            self.child_gating_sessions.add(session)
+
+        self.usb_device.resume(child.pid)
 
     def emptyline(self):
         pass
@@ -228,6 +294,11 @@ class BadadaShell(cmd.Cmd):
         self.default_rpc_methods.exports.searchmethod(method_name)
     
     def cleanup(self):
+        print('[*] Detaching from childs...')
+
+        for child_session in list(self.child_gating_sessions):
+            child_session.detach()
+
         if self.default_rpc_methods:
             print('[*] Unloading default RPC methods')
             try:
@@ -254,12 +325,6 @@ class BadadaShell(cmd.Cmd):
                 pass
             finally:
                 self.session = None
-        
-        if self.args.processToHook != 'Gadget':
-            try:
-                self.frida_server.terminate()
-            except Exception:
-                pass
     
         print('[*] Exiting...\n' + '[*] Thanks for using Badada! ' + 'Bye \\o/')
 
@@ -270,7 +335,7 @@ class BadadaShell(cmd.Cmd):
     def help_quit():
         print('\n'.join(['Exit Frida']))
 
-    def do_reload(self):
+    def do_reload(self, in_args):
         if not self.args.javascript:
             print('[*] There is no script to reload.')
             return
@@ -291,7 +356,7 @@ class BadadaShell(cmd.Cmd):
     def help_reload():
         print('\nReloads current script for changes\n')
 
-    def do_unload(self):
+    def do_unload(self, in_args):
         if self.args.javascript and self.script:
             print('[*] Unloading current script...')
             self.script.unload()
