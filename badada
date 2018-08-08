@@ -410,6 +410,9 @@ class BadadaShell(cmd.Cmd):
 
         self.search_method(method_name)
 
+    def help_classes(self):
+        print '\n'.join(['Show all classes filtered by [<contains_this>]'])
+
     @staticmethod
     def help_classes():
         print('\n'.join(['Show all classes filtered by [<contains_this>]']))
@@ -423,6 +426,9 @@ class BadadaShell(cmd.Cmd):
             self.get_methods_with_signature(args[0], "")
         else:
             self.get_methods_with_signature(args[0], args[1])
+
+    def help_methods(self):
+        print '\n'.join(['Show all methods from <class_name> [<contains_this>]'])
 
     @staticmethod
     def help_methods():
