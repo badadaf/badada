@@ -22,7 +22,6 @@ class FridaProcess:
         if subprocess.check_output([cmd_check_frida], shell=True).strip() is '0':
             print('[*] Starting Frida server...')
             subprocess.Popen(cmd_start_frida_daemon, stdin=subprocess.PIPE, shell=True)
-        time.sleep(1)
 
     @staticmethod
     def terminate():
@@ -78,9 +77,8 @@ class BadadaShell(cmd.Cmd):
         print('[*] Waiting until the device is connected to the USB port...')
         os.system('adb wait-for-device')
 
-        time.sleep(0.5)
-
         if self.args.processToHook != 'Gadget':
+            print('[*] Checking if frida-server is located at tmp dir...')
             if subprocess.check_output(['adb shell "[ -f /data/local/tmp/frida-server ]; echo \\$?"'],
                                        shell=True).strip() is not '0':
 
