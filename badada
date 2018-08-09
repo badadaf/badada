@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 
-import argparse
-import frida
-import sys
-import time
-import subprocess
 import os
 import cmd
+import sys
+import time
+import frida
+import argparse
+import subprocess
 
 
 class FridaProcess:
@@ -22,6 +22,8 @@ class FridaProcess:
         if subprocess.check_output([cmd_check_frida], shell=True).strip() is '0':
             print('[*] Starting Frida server...')
             subprocess.Popen(cmd_start_frida_daemon, stdin=subprocess.PIPE, shell=True)
+
+            time.sleep(2)
 
     @staticmethod
     def terminate():
@@ -184,6 +186,7 @@ class BadadaShell(cmd.Cmd):
 
             for arg in args:
                 app, hook_file = arg.split('=')
+                print("[+] Child-Gating parser - APP: " + str(app) + ' HOOK: ' + str(hook_file))
 
                 if not os.path.isfile(hook_file):
                     print('[-] File %s not found' % (hook_file))
@@ -193,6 +196,7 @@ class BadadaShell(cmd.Cmd):
 
         except Exception:
             print('[-] Error while parsing --child-gating-args')
+            print(self.args.child_gating_args)
             print('How to use --child-gating-args:')
             print("badada process_to_hook --child-gating "
                   "--child-gating-args='org.mozilla.firefox=firefoxhook.js com.android.chrome=chromehook.js'")
