@@ -270,7 +270,7 @@ class BadadaShell(cmd.Cmd):
                 log_file.close()
                 
             sys.stdout.write('\n')
-            sys.stdout.write(message['stack'] + '\n')
+            sys.stdout.write(message['stack'] + '\n\n')
 
         else:
             if self.log:
@@ -282,7 +282,7 @@ class BadadaShell(cmd.Cmd):
                 
             #sys.stdout.write(str(message) + '\n')
             sys.stdout.write('\n')
-            sys.stdout.write(json.dumps(message, sort_keys=True, indent=4) + '\n')
+            sys.stdout.write(json.dumps(message, sort_keys=True, indent=4) + '\n\n')
 
     def load_script(self, file_name):
         hook_source = self.get_file_contents(file_name)
