@@ -5,6 +5,7 @@ import os
 import cmd
 import sys
 import time
+import json
 import frida
 import argparse
 import subprocess
@@ -256,7 +257,21 @@ class BadadaShell(cmd.Cmd):
                 log_file.write(" ---> ")
                 log_file.write(str(message['payload']) + '\n')
                 log_file.close()
+
+            sys.stdout.write('\n')
             sys.stdout.write(str(message['payload']) + '\n')
+
+        elif message['type'] == 'error':
+            if self.log:
+                log_file = open("logs/" + self.log, 'a')
+                log_file.write(str(time.asctime()))
+                log_file.write(" ---> ")
+                log_file.write(str(message) + '\n')
+                log_file.close()
+                
+            sys.stdout.write('\n')
+            sys.stdout.write(message['stack'] + '\n')
+
         else:
             if self.log:
                 log_file = open("logs/" + self.log, 'a')
@@ -264,7 +279,10 @@ class BadadaShell(cmd.Cmd):
                 log_file.write(" ---> ")
                 log_file.write(str(message) + '\n')
                 log_file.close()
-            sys.stdout.write(str(message) + '\n')
+                
+            #sys.stdout.write(str(message) + '\n')
+            sys.stdout.write('\n')
+            sys.stdout.write(json.dumps(message, sort_keys=True, indent=4) + '\n')
 
     def load_script(self, file_name):
         hook_source = self.get_file_contents(file_name)
