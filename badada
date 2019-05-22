@@ -62,6 +62,7 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('--child-gating', action='store_true', help='Monitor the chidren of a process')
         parser.add_argument('--child-gating-args', help='Specify the arguments of '
                                                         'child gating feature')
+        parser.add_argument('-v', '--verbose', action='store_true', help='Gives more info on all process initialization')
 
         self.args = parser.parse_args()
         self.log = self.args.log
@@ -211,9 +212,13 @@ class BadadaShell(cmd.Cmd):
         self.child_gating_sessions.remove(session)
 
     def on_child_added(self, child):
-        print('\n[*] New Child: %s (PID: %s | PPID: %s)' % (child.identifier, child.pid, child.parent_pid))
+
+
+        if self.args.verbose:
+            print('\n[*] New Child: %s (PID: %s | PPID: %s)' % (child.identifier, child.pid, child.parent_pid))
 
         if child.identifier in self.child_gating_hooks.keys():
+            print('\n[*] New Child: %s (PID: %s | PPID: %s)' % (child.identifier, child.pid, child.parent_pid))
             print('[*] Hooking %s' % (child.identifier))
             session = self.usb_device.attach(child.pid)
             session.on('detached', lambda reason: self.on_child_removed(reason, session, child))
