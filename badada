@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 
 import os
@@ -129,22 +129,22 @@ class BadadaShell(cmd.Cmd):
                     return
 
                 if not self.args.activity:
-                    print('[*] Spawning %s' % (self.args.processToHook))
+                    print('[*] Spawning {0}'.format(self.args.processToHook))
                     pid = self.usb_device.spawn([self.args.processToHook])
 
                 else:
-                    print('[*] Spawning %s in "%s" activity' % (self.args.processToHook, self.args.activity))
+                    print('[*] Spawning {0} in "{1}" activity'.format(self.args.processToHook, self.args.activity))
                     pid = self.usb_device.spawn(self.args.processToHook, activity=self.args.activity)
 
-                print('[*] Attaching to %s' % (self.args.processToHook))
+                print('[*] Attaching to {0}'.format(self.args.processToHook))
                 self.session = self.usb_device.attach(pid)
 
             elif self.args.processToHook.isdigit():
-                print('[*] Attaching to ' + self.args.processToHook + " pid")
+                print('[*] Attaching to {0} pid'.format(self.args.processToHook))
                 self.session = self.usb_device.attach(int(self.args.processToHook))
 
             else:
-                print('[*] Attaching to ' + self.args.processToHook + " process")
+                print('[*] Attaching to {0} process'.format(self.args.processToHook))
                 self.session = self.usb_device.attach(self.args.processToHook)
 
         except frida.ServerNotRunningError:
@@ -152,7 +152,7 @@ class BadadaShell(cmd.Cmd):
             return
 
         except frida.ProcessNotFoundError:
-            print('[-] Unable to find ' + self.args.processToHook + ' to attach.')
+            print('[-] Unable to find "{0}" to attach.'.format(self.args.processToHook))
             return
 
         if self.args.child_gating:
@@ -165,17 +165,17 @@ class BadadaShell(cmd.Cmd):
         self.script = None
 
         if self.args.javascript:
-            print('[*] Loading %s' % (self.args.javascript))
+            print('[*] Loading {0}'.format(self.args.javascript))
             try:
                 self.script = self.load_script(self.args.javascript)
 
             except IOError:
-                print('[-] Unable to load script "' + self.args.javascript + '": file not found.')
+                print('[-] Unable to load script "{0}": file not found.'.format(self.args.javascript))
                 self.script = None
                 self.args.javascript = None
 
         if self.args.spawn:
-            print('[*] Resuming %s' % (self.args.processToHook))
+            print('[*] Resuming {0}'.format(self.args.processToHook))
             time.sleep(1)
             self.usb_device.resume(pid)
 
@@ -188,10 +188,10 @@ class BadadaShell(cmd.Cmd):
 
             for arg in args:
                 app, hook_file = arg.split('=')
-                print("[+] Child-Gating parser - APP: " + str(app) + ' HOOK: ' + str(hook_file))
+                print('[+] Child-Gating parser - APP: {0} HOOK: {1}'.format(str(app), str(hook_file)))
 
                 if not os.path.isfile(hook_file):
-                    print('[-] File %s not found' % (hook_file))
+                    print('[-] File {0} not found'.format(hook_file))
                     raise Exception('Argument Parsing error')
 
                 dict_hooks[app] = hook_file
@@ -208,18 +208,16 @@ class BadadaShell(cmd.Cmd):
         self.child_gating_hooks = dict_hooks
 
     def on_child_removed(self, reason, session, child):
-        print('\n[*] Child Removed (%s): %s' % (reason, child.identifier))
+        print('\n[*] Child Removed ({0}): {1}'.format(reason, child.identifier))
         self.child_gating_sessions.remove(session)
 
     def on_child_added(self, child):
-
-
         if self.args.verbose:
-            print('\n[*] New Child: %s (PID: %s | PPID: %s)' % (child.identifier, child.pid, child.parent_pid))
+            print('\n[*] New Child: {0} (PID: {1} | PPID: {2})'.format(child.identifier, child.pid, child.parent_pid))
 
         if child.identifier in self.child_gating_hooks.keys():
-            print('\n[*] New Child: %s (PID: %s | PPID: %s)' % (child.identifier, child.pid, child.parent_pid))
-            print('[*] Hooking %s' % (child.identifier))
+            print('\n[*] New Child: {0} (PID: {1} | PPID: {2})'.format(child.identifier, child.pid, child.parent_pid))
+            print('[*] Hooking {0}'.format(child.identifier))
             session = self.usb_device.attach(child.pid)
             session.on('detached', lambda reason: self.on_child_removed(reason, session, child))
             session.enable_child_gating()
@@ -284,8 +282,7 @@ class BadadaShell(cmd.Cmd):
                 log_file.write(" ---> ")
                 log_file.write(str(message) + '\n')
                 log_file.close()
-                
-            #sys.stdout.write(str(message) + '\n')
+
             sys.stdout.write('\n')
             sys.stdout.write(json.dumps(message, sort_keys=True, indent=4) + '\n\n')
 
@@ -351,7 +348,8 @@ class BadadaShell(cmd.Cmd):
             finally:
                 self.session = None
     
-        print('[*] Exiting...\n' + '[*] Thanks for using Badada! ' + 'Bye \\o/')
+        print('[*] Exiting...\n')
+        print('[*] Thanks for using Badada! Bye \\o/')
 
     def do_quit(self, in_args):
         raise SystemExit
@@ -370,11 +368,11 @@ class BadadaShell(cmd.Cmd):
             self.script.unload()
             self.script = None
 
-        print('[*] Reloading %s' % (self.args.javascript))
+        print('[*] Reloading {0}'.format(self.args.javascript))
         try:
             self.script = self.load_script(self.args.javascript)
         except IOError:
-            print('[-] Unable load script "' + self.args.javascript + '": file not found.')
+            print('[-] Unable load script "{0}": file not found.'.format(self.args.javascript))
             self.script = None
 
     @staticmethod
@@ -406,7 +404,7 @@ class BadadaShell(cmd.Cmd):
             try:
                 self.script = self.load_script(self.args.javascript)
             except IOError:
-                print('[-] Unable load script "' + self.args.javascript + '": file not found.')
+                print('[-] Unable load script "{0}": file not found.'.format(self.args.javascript))
                 self.script = None
 
     @staticmethod
@@ -435,9 +433,6 @@ class BadadaShell(cmd.Cmd):
 
         self.search_method(method_name)
 
-    def help_classes(self):
-        print '\n'.join(['Show all classes filtered by [<contains_this>]'])
-
     @staticmethod
     def help_classes():
         print('\n'.join(['Show all classes filtered by [<contains_this>]']))
@@ -451,9 +446,6 @@ class BadadaShell(cmd.Cmd):
             self.get_methods_with_signature(args[0], "")
         else:
             self.get_methods_with_signature(args[0], args[1])
-
-    def help_methods(self):
-        print '\n'.join(['Show all methods from <class_name> [<contains_this>]'])
 
     @staticmethod
     def help_methods():
@@ -514,6 +506,6 @@ if __name__ == '__main__':
     except KeyboardInterrupt as err:
         print('[*] CTRL+C detected...')
     except Exception as e:
-        print('[-] %s' % (e.message.capitalize()))
+        print('[-] {0}'.format(e.message.capitalize()))
     finally:
         prompt.cleanup()
