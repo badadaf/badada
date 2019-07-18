@@ -39,7 +39,7 @@ rpc.exports = {
                         var methodName = methods[j].toGenericString();
 
                         if(methodName.toLowerCase().search(methodToSearch.toLowerCase()) != -1){
-                            send("[*] FOUND HERE - " + classX.toString());
+                            send("[*] FOUND HERE - " + classX.toString() + " : " + methodName);
                         }
                     }
                 },
