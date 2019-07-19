@@ -62,7 +62,7 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('--child-gating', action='store_true', help='Monitor the chidren of a process')
         parser.add_argument('--child-gating-args', help='Specify the arguments of '
                                                         'child gating feature')
-        parser.add_argument('-v', '--verbose', action='store_true', help='Gives more info on all process initialization')
+        parser.add_argument('-v', '--verbose', action='store_true', help='Increases the verbosity level')
 
         self.args = parser.parse_args()
         self.log = self.args.log
@@ -86,7 +86,6 @@ class BadadaShell(cmd.Cmd):
             if subprocess.check_output(['adb shell "[ -f /data/local/tmp/frida-server ]; echo \\$?"'],
                                        shell=True).strip() is not b'0':
 
-                print('Res: {0}'.format(res))
                 print('[-] frida-server does not exist in /data/local/tmp/frida-server')
                 return
 
