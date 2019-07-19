@@ -20,7 +20,7 @@ class FridaProcess:
         cmd_check_frida = 'adb shell "ps; ps -ef" | sort | uniq | grep frida-server | wc -l'
         cmd_start_frida_daemon = 'adb shell "/data/local/tmp/frida-server -D"'
 
-        if subprocess.check_output([cmd_check_frida], shell=True).strip() is '0':
+        if subprocess.check_output([cmd_check_frida], shell=True).strip() is b'0':
             print('[*] Starting Frida server...')
             subprocess.Popen(cmd_start_frida_daemon, stdin=subprocess.PIPE, shell=True)
 
@@ -84,8 +84,9 @@ class BadadaShell(cmd.Cmd):
         if self.args.processToHook != 'Gadget':
             print('[*] Checking if frida-server is located at tmp dir...')
             if subprocess.check_output(['adb shell "[ -f /data/local/tmp/frida-server ]; echo \\$?"'],
-                                       shell=True).strip() is not '0':
+                                       shell=True).strip() is not b'0':
 
+                print('Res: {0}'.format(res))
                 print('[-] frida-server does not exist in /data/local/tmp/frida-server')
                 return
 
@@ -160,7 +161,7 @@ class BadadaShell(cmd.Cmd):
 
         print('[*] Loading default RPC methods')
         self.default_rpc_methods = self.load_script(os.path.join(
-            os.path.dirname(__file__), 'scripts/', 'scriptsRPC.js'))
+            os.path.dirname(os.path.realpath(__file__)), 'scripts/', 'scriptsRPC.js'))
 
         self.script = None
 
@@ -483,7 +484,7 @@ class BadadaShell(cmd.Cmd):
             try:
                 self.session = self.usb_device.attach(args[0])
                 self.default_rpc_methods = self.load_script(
-                    os.path.join(os.path.dirname(__file__), 'scripts/', 'scriptsRPC.js'))
+                    os.path.join(os.path.dirname(os.path.realpath(__file__)), 'scripts/', 'scriptsRPC.js'))
 
                 self.args.javascript = None
             except frida.ServerNotRunningError:
