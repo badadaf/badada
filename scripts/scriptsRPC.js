@@ -114,6 +114,106 @@ rpc.exports = {
                 send(newMethodSignature);
             }
         });
+    },
+
+    generatehooks: function(classFullPathName, methodNameFilter){
+        Java.perform(function(){
+            try{
+                var Clazz = Java.use(classFullPathName);
+            } catch(err){
+                send('ERROR: Class not found: ' + classFullPathName);
+                return;
+            }
+
+            var classFullPathNameSplitted = classFullPathName.split('.');
+            var className = classFullPathNameSplitted[classFullPathNameSplitted.length - 1];
+            var classNiceName = className.replace(new RegExp('\\$', 'g'), '_');
+
+            var scriptString = 'Java.perform(function(){\n';
+            scriptString += '\tvar ' + classNiceName + ' = Java.use("' + classFullPathName + '");\n\n';
+
+            var ClazzMethods = Clazz.class.getDeclaredMethods();
+            var methodNameCount = {};
+
+            for(var i = 0; i < ClazzMethods.length; i++){
+                var methodFullSignature = ClazzMethods[i].toGenericString();
+
+                var lastMarkIndex = -1;
+                for(var j = 0; methodFullSignature[j] != '('; j++){
+                    if(methodFullSignature[j] == ' ' || methodFullSignature[j] == '.'){
+                        lastMarkIndex = j;
+                    }
+                }
+
+                var methodName = methodFullSignature.slice(lastMarkIndex+1, j);
+
+                if(methodNameFilter !== "" && methodName.toLowerCase().indexOf(methodNameFilter.toLowerCase()) === -1){
+                    continue;
+                }
+
+                if(!(methodName in methodNameCount)){
+                    methodNameCount[methodName] = 1;
+                    var overloads = Clazz[methodName].overloads;
+
+                    overloads.forEach(function(overload){
+                        var argTypes = overload.argumentTypes;
+
+                        scriptString += '\t//' + classNiceName + '.' + methodName;
+
+                        if(overloads.length > 1){
+                            scriptString += '.overload(';
+
+                            for(var j = 0; j < argTypes.length; j++){
+                                if(j == argTypes.length - 1){
+                                    scriptString += "'" + argTypes[j].className + "'";
+
+                                }
+                                else{
+                                    scriptString += "'" + argTypes[j].className + "', ";
+                                }
+                            }
+
+                            scriptString += ')';
+                        }
+
+                        scriptString += '.implementation = function(';
+
+                        for(var j = 0; j < argTypes.length; j++){
+                            if(j == argTypes.length - 1){
+                                scriptString += 'p' + (j+1).toString();
+                            }
+                            else{
+                                scriptString += 'p' + (j+1).toString() + ', ';
+                            }
+                        }
+
+                        scriptString += '){\n';
+                        scriptString += '\t//\tsend("Entering ' + methodName + '");\n';
+                        scriptString += '\t//\tvar originalResult = this.' + methodName + '(';
+
+                        for(var j = 0; j < argTypes.length; j++){
+                            if(j == argTypes.length - 1){
+                                scriptString += 'p' + (j+1).toString();
+                            }
+                            else{
+                                scriptString += 'p' + (j+1).toString() + ', ';
+                            }
+                        }
+
+                        scriptString += ');\n';
+                        scriptString += '\t//\tsend("Leaving ' + methodName + '");\n';
+                        scriptString += '\t//\treturn originalResult;\n';
+                        scriptString += '\t//};\n\n';
+                    });
+                }
+            }
+
+            scriptString += '\n});'
+
+            var finalScriptString = scriptString.replace(new RegExp('\t', 'g'), '    ');
+
+            send(finalScriptString);
+        });
     }
 };
 
