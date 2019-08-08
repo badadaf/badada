@@ -1,15 +1,5 @@
 ## Badada Frida Client
 
-> ```
->  ____          _____          _____          
-> |  _ \   /\   |  __ \   /\   |  __ \   /\    
-> | |_) | /  \  | |  | | /  \  | |  | | /  \   
-> |  _ < / /\ \ | |  | |/ /\ \ | |  | |/ /\ \  
-> | |_) / ____ \| |__| / ____ \| |__| / ____ \ 
-> |____/_/    \_\_____/_/    \_\_____/_/    \_\
-> ```                                              
-
-
 This tool was developed to help during the security assessment of Android applications.
 It implements some commonly used Frida scripts and offer them via a simple command line interface.
 
