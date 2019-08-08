@@ -17,8 +17,8 @@ It implements some commonly used Frida scripts and offer them via a simple comma
 
 - Python 3.0
 - Frida (pip3 install -U frida)
-- Frida Server for rooted devices
-- Frida Gadget for non-rooted devices
+- Frida Server for rooted devices (https://github.com/frida/frida/releases)
+- Frida Gadget for non-rooted devices (https://github.com/badadaf/apkpatcher)
 - ADB
 
 #### Before you use Badada!
