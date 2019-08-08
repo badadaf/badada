@@ -425,6 +425,20 @@ class BadadaShell(cmd.Cmd):
             self.get_classes(args[0])
 
     @staticmethod
+    def help_generatehooks():
+        print('Generate a Frida compatible script with hooks for all class methods')
+
+    def do_generatehooks(self, in_args):
+        args = in_args.strip().split(" ")
+        if len(args) < 1:
+            print('\n[-] Usage: generatehooks <className> [methodNameFilter]\n')
+
+        elif len(args) == 1:
+            self.default_rpc_methods.exports.generatehooks(args[0], "")
+        else:
+            self.default_rpc_methods.exports.generatehooks(args[0], args[1])
+
+    @staticmethod
     def help_searchmethod():
         print('\n'.join(['Iterate in all classes, looking for a specific method']))
 
