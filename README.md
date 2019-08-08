@@ -111,7 +111,7 @@ After hooking a process badada will show a cmd. You can use some built-in comman
     searchmethod isDeviceRooted
     ```
 
-- ***Generate a Frida's hooks for all methods**
+- **Generate a Frida's hooks for all methods**
     You can use badada to generate a hook script skeleton for all methods of a specified class
     ```
     generatehooks java.security.KeyStore
