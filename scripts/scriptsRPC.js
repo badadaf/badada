@@ -158,7 +158,7 @@ rpc.exports = {
                     overloads.forEach(function(overload){
                         var argTypes = overload.argumentTypes;
 
-                        scriptString += "\t//Method Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
+                        scriptString += "\t////Method Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
                         scriptString += '\t//' + classNiceName + '.' + methodName;
 
                         if(overloads.length > 1){
