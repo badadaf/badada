@@ -158,6 +158,7 @@ rpc.exports = {
                     overloads.forEach(function(overload){
                         var argTypes = overload.argumentTypes;
 
+                        scriptString += "\t//Method Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
                         scriptString += '\t//' + classNiceName + '.' + methodName;
 
                         if(overloads.length > 1){
@@ -188,7 +189,7 @@ rpc.exports = {
                         }
 
                         scriptString += '){\n';
-                        scriptString += '\t//\tsend("Entering ' + methodName + '");\n';
+                        scriptString += '\t//\tsend("Entering ' + classNiceName + "." + methodName + '");\n';
                         scriptString += '\t//\tvar originalResult = this.' + methodName + '(';
 
                         for(var j = 0; j < argTypes.length; j++){
@@ -201,7 +202,7 @@ rpc.exports = {
                         }
 
                         scriptString += ');\n';
-                        scriptString += '\t//\tsend("Leaving ' + methodName + '");\n';
+                        scriptString += '\t//\tsend("Leaving ' + classNiceName + "." + methodName + '");\n';
                         scriptString += '\t//\treturn originalResult;\n';
                         scriptString += '\t//};\n\n';
                     });
