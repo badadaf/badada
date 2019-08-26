@@ -64,6 +64,10 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('--child-gating', action='store_true', help='Monitor the chidren of a process')
         parser.add_argument('--child-gating-args', help='Specify the arguments of '
                                                         'child gating feature')
+
+        parser.add_argument('--enable-jit', action='store_true', help='Uses V8 as the Javascript Runtime '
+                                                                      'instead of Duktape')
+
         parser.add_argument('-v', '--verbose', action='store_true', help='Increases the verbosity level')
 
         self.args = parser.parse_args()
@@ -157,6 +161,12 @@ class BadadaShell(cmd.Cmd):
             print('[-] Unable to find "{0}" to attach.'.format(self.args.processToHook))
             return
 
+        if self.args.enable_jit:
+            if self.args.verbose:
+                print('[*] Enabling JIT...')
+
+            self.session.enable_jit()
+
         if self.args.child_gating:
             self.session.enable_child_gating()
 
@@ -221,6 +231,13 @@ class BadadaShell(cmd.Cmd):
             print('\n[*] New Child: {0} (PID: {1} | PPID: {2})'.format(child.identifier, child.pid, child.parent_pid))
             print('[*] Hooking {0}'.format(child.identifier))
             session = self.usb_device.attach(child.pid)
+
+            if self.args.enable_jit:
+                if self.args.verbose:
+                    print('[*] Enabling JIT...')
+
+                session.enable_jit()
+
             session.on('detached', lambda reason: self.on_child_removed(reason, session, child))
             session.enable_child_gating()
 
@@ -498,6 +515,13 @@ class BadadaShell(cmd.Cmd):
 
             try:
                 self.session = self.usb_device.attach(args[0])
+
+                if self.args.enable_jit:
+                    if self.args.verbose:
+                        print('[*] Enabling JIT...')
+
+                    self.session.enable_jit()
+
                 self.default_rpc_methods = self.load_script(
                     os.path.join(os.path.dirname(os.path.realpath(__file__)), 'scripts/', 'scriptsRPC.js'))
 
