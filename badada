@@ -225,11 +225,13 @@ class BadadaShell(cmd.Cmd):
 
     def on_child_added(self, child):
         if self.args.verbose:
-            print('\n[*] New Child: {0} (PID: {1} | PPID: {2})'.format(child.identifier, child.pid, child.parent_pid))
+            print('\n[*] New Child: process_name={0} (pid={1}, ppid={2})'
+                  .format(child.identifier, child.pid, child.parent_pid))
 
         if child.identifier in self.child_gating_hooks.keys():
-            print('\n[*] New Child: {0} (PID: {1} | PPID: {2})'.format(child.identifier, child.pid, child.parent_pid))
-            print('[*] Hooking {0}'.format(child.identifier))
+            print('[*] Hooking pid {0} - (process_name={1}, ppid={2})'
+                  .format(child.pid, child.identifier, child.parent_pid))
+
             session = self.usb_device.attach(child.pid)
 
             if self.args.enable_jit:
