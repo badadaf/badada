@@ -9,6 +9,7 @@ import json
 import frida
 import argparse
 import subprocess
+from threading import Lock
 
 
 class FridaProcess:
@@ -44,6 +45,7 @@ class BadadaShell(cmd.Cmd):
     usb_device = None
     child_gating_hooks = {}
     child_gating_sessions = set()
+    hook_lock = Lock()
 
     def __init__(self):
         cmd.Cmd.__init__(self)
@@ -67,6 +69,9 @@ class BadadaShell(cmd.Cmd):
 
         parser.add_argument('--enable-jit', action='store_true', help='Uses V8 as the Javascript Runtime '
                                                                       'instead of Duktape')
+
+        parser.add_argument('--avoid-grandson-child-gating', action='store_true', help='Avoid enabling child-gating '
+                                                                                       'for grandsons')
 
         parser.add_argument('-v', '--verbose', action='store_true', help='Increases the verbosity level')
 
@@ -134,6 +139,7 @@ class BadadaShell(cmd.Cmd):
                     print('[-] To spawn the process you must pass the process name')
                     return
 
+                self.hook_lock.acquire()
                 if not self.args.activity:
                     print('[*] Spawning {0}'.format(self.args.processToHook))
                     pid = self.usb_device.spawn([self.args.processToHook])
@@ -143,22 +149,28 @@ class BadadaShell(cmd.Cmd):
                     pid = self.usb_device.spawn(self.args.processToHook, activity=self.args.activity)
 
                 print('[*] Attaching to {0}'.format(self.args.processToHook))
+
                 self.session = self.usb_device.attach(pid)
 
             elif self.args.processToHook.isdigit():
+                self.hook_lock.acquire()
+
                 print('[*] Attaching to {0} pid'.format(self.args.processToHook))
                 self.session = self.usb_device.attach(int(self.args.processToHook))
 
             else:
+                self.hook_lock.acquire()
                 print('[*] Attaching to {0} process'.format(self.args.processToHook))
                 self.session = self.usb_device.attach(self.args.processToHook)
 
         except frida.ServerNotRunningError:
             print('[-] Unable to connect to frida-server.')
+            self.hook_lock.release()
             return
 
         except frida.ProcessNotFoundError:
             print('[-] Unable to find "{0}" to attach.'.format(self.args.processToHook))
+            self.hook_lock.release()
             return
 
         if self.args.enable_jit:
@@ -191,6 +203,8 @@ class BadadaShell(cmd.Cmd):
             time.sleep(1)
             self.usb_device.resume(pid)
 
+        self.hook_lock.release()
+
     def parse_child_gating_args(self):
         print('[*] Parsing Child Gating Args...')
 
@@ -220,10 +234,13 @@ class BadadaShell(cmd.Cmd):
         self.child_gating_hooks = dict_hooks
 
     def on_child_removed(self, reason, session, child):
+        self.hook_lock.acquire()
         print('\n[*] Child Removed ({0}): {1}'.format(reason, child.identifier))
         self.child_gating_sessions.remove(session)
+        self.hook_lock.release()
 
     def on_child_added(self, child):
+        self.hook_lock.acquire()
         if self.args.verbose:
             print('\n[*] New Child: process_name={0} (pid={1}, ppid={2})'
                   .format(child.identifier, child.pid, child.parent_pid))
@@ -241,9 +258,15 @@ class BadadaShell(cmd.Cmd):
                 session.enable_jit()
 
             session.on('detached', lambda reason: self.on_child_removed(reason, session, child))
-            session.enable_child_gating()
+
+            if not self.args.avoid_grandson_child_gating:
+                if self.args.verbose:
+                    print('[*] Enabling child gating for grandson...')
+
+                session.enable_child_gating()
 
             hook_source = self.get_file_contents(self.child_gating_hooks[child.identifier])
+
             self.script = session.create_script(hook_source)
             self.script.on('message', self.on_message)
             self.script.load()
@@ -251,6 +274,7 @@ class BadadaShell(cmd.Cmd):
             self.child_gating_sessions.add(session)
 
         self.usb_device.resume(child.pid)
+        self.hook_lock.release()
 
     def emptyline(self):
         pass
