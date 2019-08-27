@@ -70,8 +70,8 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('--enable-jit', action='store_true', help='Uses V8 as the Javascript Runtime '
                                                                       'instead of Duktape')
 
-        parser.add_argument('--avoid-grandson-child-gating', action='store_true', help='Avoid enabling child-gating '
-                                                                                       'for grandsons')
+        parser.add_argument('--avoid-grandchildren-gating', action='store_true', help='Avoid enabling child-gating for '
+                                                                                      'grandchildren')
 
         parser.add_argument('-v', '--verbose', action='store_true', help='Increases the verbosity level')
 
@@ -259,9 +259,9 @@ class BadadaShell(cmd.Cmd):
 
             session.on('detached', lambda reason: self.on_child_removed(reason, session, child))
 
-            if not self.args.avoid_grandson_child_gating:
+            if not self.args.avoid_grandchildren_gating:
                 if self.args.verbose:
-                    print('[*] Enabling child gating for grandson...')
+                    print('[*] Enabling grandchild gating...')
 
                 session.enable_child_gating()
 
