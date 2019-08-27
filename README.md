@@ -70,6 +70,11 @@ After installing badada and placing frida-server in **/data/local/tmp/frida-serv
     badada zygote64 --child-gating --child-gating-args='com.example.app1=hook-script-1.js com.example.app2=hook-script-2.js'
     ```
 
+- **Avoid hooking grandchildren**
+    You may want to hook a process children, but not its grandchildren
+    ```
+    badada zygote --child-gating --child-gating-args "com.example.app1=hook-script-1.js" -v --enable-jit --avoid-grandchildren-gating
+    ```
 
 #### Command Line features
 After hooking a process badada will show a cmd. You can use some built-in commands to help you to reverse engineer an application.
