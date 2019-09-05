@@ -132,8 +132,84 @@ rpc.exports = {
             var scriptString = 'Java.perform(function(){\n';
             scriptString += '\tvar ' + classNiceName + ' = Java.use("' + classFullPathName + '");\n\n';
 
-            var ClazzMethods = Clazz.class.getDeclaredMethods();
+            var ClazzConstructors = Clazz.class.getDeclaredConstructors();
             var methodNameCount = {};
+
+            for(var i = 0; i < ClazzConstructors.length; i++){
+                var constructorFullSignature = ClazzConstructors[i].toGenericString();
+
+                var lastMarkIndex = -1;
+                for(var j = 0; constructorFullSignature[j] != '('; j++){
+                    if(constructorFullSignature[j] == ' ' || constructorFullSignature[j] == '.'){
+                        lastMarkIndex = j;
+                    }
+                }
+
+                var constructorName = constructorFullSignature.slice(lastMarkIndex+1, j);
+
+                if(methodNameFilter !== "" && "init".indexOf(methodNameFilter.toLowerCase()) === -1){
+                    continue;
+                }
+
+                if(!(constructorName in methodNameCount)){
+                    methodNameCount[constructorName] = 1;
+                    var overloads = Clazz["$init"].overloads;
+
+                    overloads.forEach(function(overload){
+                        var argTypes = overload.argumentTypes;
+
+                        scriptString += "\t////Constructor Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
+                        scriptString += '\t//' + classNiceName + '.$init';
+
+                        if(overloads.length > 1){
+                            scriptString += '.overload(';
+
+                            for(var j = 0; j < argTypes.length; j++){
+                                if(j == argTypes.length - 1){
+                                    scriptString += "'" + argTypes[j].className + "'";
+                                }
+                                else{
+                                    scriptString += "'" + argTypes[j].className + "', ";
+                                }
+                            }
+
+                            scriptString += ')';
+                        }
+
+                        scriptString += '.implementation = function(';
+
+                        for(var j = 0; j < argTypes.length; j++){
+                            if(j == argTypes.length - 1){
+                                scriptString += 'p' + (j+1).toString();
+                            }
+                            else{
+                                scriptString += 'p' + (j+1).toString() + ', ';
+                            }
+                        }
+
+                        scriptString += '){\n';
+                        scriptString += '\t//\tsend("Entering ' + classNiceName + "." + "$init" + '");\n';
+                        scriptString += '\t//\tvar originalResult = this.' + "$init" + '(';
+
+                        for(var j = 0; j < argTypes.length; j++){
+                            if(j == argTypes.length - 1){
+                                scriptString += 'p' + (j+1).toString();
+                            }
+                            else{
+                                scriptString += 'p' + (j+1).toString() + ', ';
+                            }
+                        }
+
+                        scriptString += ');\n';
+                        scriptString += '\t//\tsend("Leaving ' + classNiceName + "." + "$init" + '");\n';
+                        scriptString += '\t//\treturn originalResult;\n';
+                        scriptString += '\t//};\n\n';
+                    });
+                }
+            }
+
+            var ClazzMethods = Clazz.class.getDeclaredMethods();
+            methodNameCount = {};
 
             for(var i = 0; i < ClazzMethods.length; i++){
                 var methodFullSignature = ClazzMethods[i].toGenericString();
