@@ -21,7 +21,7 @@ class FridaProcess:
         cmd_check_frida = 'adb shell "ps; ps -ef" | sort | uniq | grep frida-server | wc -l'
         cmd_start_frida_daemon = 'adb shell "/data/local/tmp/frida-server -D"'
 
-        if subprocess.check_output([cmd_check_frida], shell=True).strip() is b'0':
+        if subprocess.check_output([cmd_check_frida], shell=True).strip() == b'0':
             print('[*] Starting Frida server...')
             subprocess.Popen(cmd_start_frida_daemon, stdin=subprocess.PIPE, shell=True)
 
@@ -95,7 +95,7 @@ class BadadaShell(cmd.Cmd):
         if self.args.processToHook != 'Gadget':
             print('[*] Checking if frida-server is located at tmp dir...')
             if subprocess.check_output(['adb shell "[ -f /data/local/tmp/frida-server ]; echo \\$?"'],
-                                       shell=True).strip() is not b'0':
+                                       shell=True).strip() != b'0':
 
                 print('[-] frida-server does not exist in /data/local/tmp/frida-server')
                 return
@@ -282,7 +282,7 @@ class BadadaShell(cmd.Cmd):
     def default(self, line):
         command, arg, line = self.parseline(line)
 
-        if line[0] is '!':
+        if line[0] == '!':
             os.system(line[1:])
         elif command in self.aliases:
             self.aliases[command](arg)
