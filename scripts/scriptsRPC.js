@@ -5,13 +5,36 @@ rpc.exports = {
     getclasses: function(containsThis) {
         Java.perform(function() {
             send("[*] Enumerating classes...");
+            var shouldStopFlag = false;
+            var auxCount = 0;
+
             Java.enumerateLoadedClasses({
                 onMatch: function(entry) {
+                    auxCount += 1
+                    if(shouldStopFlag == false && auxCount % 1000 == 0) {
+                        send('shouldStopSyncMsg');
+                        var op = recv('shouldStopSyncMsg', function(value) {
+                            shouldStopFlag = value.payload;
+                        });
+
+                        op.wait();
+                    }
+
+                    if(shouldStopFlag) {
+                        return 'stop';
+                    }
+
                     if (entry.toString().toLowerCase().search(containsThis.toLowerCase()) != -1) {
                         send(entry.toString());
                     }
                 },
                 onComplete: function (){
+                    if(shouldStopFlag) {
+                        send('stoppedSyncMsg');
+                        shouldStopFlag = false;
+                        return;
+                    }
+
                     send("[*] Done!");
                 }
             });
@@ -24,8 +47,25 @@ rpc.exports = {
             send("[*] Searching for " + methodToSearch);
             send("[*] This can take some time...");
 
+            var shouldStopFlag = false;
+            var auxCount = 0;
+
             Java.enumerateLoadedClasses({
                 onMatch: function(entry) {
+                    auxCount += 1
+                    if(shouldStopFlag == false && auxCount % 50 == 0) {
+                        send('shouldStopSyncMsg');
+                        var op = recv('shouldStopSyncMsg', function(value) {
+                            shouldStopFlag = value.payload;
+                        });
+
+                        op.wait();
+                    }
+
+                    if(shouldStopFlag) {
+                        return 'stop';
+                    }
+
                     try{
                         var classX = Java.use(entry.toString());
                     } catch(err){
@@ -44,6 +84,12 @@ rpc.exports = {
                     }
                 },
                 onComplete: function (){
+                    if(shouldStopFlag) {
+                        send('stoppedSyncMsg');
+                        shouldStopFlag = false;
+                        return;
+                    }
+
                     send("[*] Done!");
                 }
             });
@@ -52,6 +98,9 @@ rpc.exports = {
 
     getmethods: function(nameOfClass, containsThis){
         Java.perform(function(){
+            var shouldStopFlag = false;
+            var auxCount = 0;
+
             try{
                 var className = Java.use(nameOfClass);
             } catch(err){
@@ -63,6 +112,22 @@ rpc.exports = {
 
             for(var i = 0; i < methods.length; i++)
             {
+                auxCount += 1;
+                if(shouldStopFlag == false && auxCount % 10 == 0) {
+                    send('shouldStopSyncMsg');
+                    var op = recv('shouldStopSyncMsg', function(value) {
+                        shouldStopFlag = value.payload;
+                    });
+
+                    op.wait();
+                }
+
+                if(shouldStopFlag) {
+                    send('stoppedSyncMsg');
+                    shouldStopFlag = false;
+                    return;
+                }
+
                 var methodSignature = methods[i].toGenericString();
 
                 if (methodSignature.toString().toLowerCase().search(containsThis.toLowerCase()) == -1) {
@@ -110,7 +175,6 @@ rpc.exports = {
                 }
 
                 newMethodSignature += ')';
-
                 send(newMethodSignature);
             }
         });
@@ -118,6 +182,9 @@ rpc.exports = {
 
     generatehooks: function(classFullPathName, methodNameFilter){
         Java.perform(function(){
+            var shouldStopFlag = false;
+            var auxCount = 0;
+
             try{
                 var Clazz = Java.use(classFullPathName);
             } catch(err){
@@ -136,6 +203,22 @@ rpc.exports = {
             var methodNameCount = {};
 
             for(var i = 0; i < ClazzConstructors.length; i++){
+                auxCount += 1;
+                if(shouldStopFlag == false && auxCount % 10 == 0) {
+                    send('shouldStopSyncMsg');
+                    var op = recv('shouldStopSyncMsg', function(value) {
+                        shouldStopFlag = value.payload;
+                    });
+
+                    op.wait();
+                }
+
+                if(shouldStopFlag) {
+                    send('stoppedSyncMsg');
+                    shouldStopFlag = false;
+                    return;
+                }
+
                 var constructorFullSignature = ClazzConstructors[i].toGenericString();
 
                 var lastMarkIndex = -1;
@@ -211,7 +294,24 @@ rpc.exports = {
             var ClazzMethods = Clazz.class.getDeclaredMethods();
             methodNameCount = {};
 
+            auxCount = 0;
             for(var i = 0; i < ClazzMethods.length; i++){
+                auxCount += 1;
+                if(shouldStopFlag == false && auxCount % 10 == 0) {
+                    send('shouldStopSyncMsg');
+                    var op = recv('shouldStopSyncMsg', function(value) {
+                        shouldStopFlag = value.payload;
+                    });
+
+                    op.wait();
+                }
+
+                if(shouldStopFlag) {
+                    send('stoppedSyncMsg');
+                    shouldStopFlag = false;
+                    return;
+                }
+
                 var methodFullSignature = ClazzMethods[i].toGenericString();
 
                 var lastMarkIndex = -1;
@@ -284,10 +384,24 @@ rpc.exports = {
                     });
                 }
             }
-
             scriptString += '\n});'
 
             var finalScriptString = scriptString.replace(new RegExp('\t', 'g'), '    ');
+
+            if(shouldStopFlag == false) {
+                send('shouldStopSyncMsg');
+                var op = recv('shouldStopSyncMsg', function(value) {
+                    shouldStopFlag = value.payload;
+                });
+
+                op.wait();
+            }
+
+            if(shouldStopFlag) {
+                send('stoppedSyncMsg');
+                shouldStopFlag = false;
+                return;
+            }
 
             send(finalScriptString);
         });

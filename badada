@@ -7,9 +7,22 @@ import sys
 import time
 import json
 import frida
+import signal
 import argparse
 import subprocess
 from threading import Lock
+
+
+class NotAbortable:
+    def __init__(self):
+        self.original_sigint_handler = None
+
+    def __enter__(self):
+        self.original_sigint_handler = signal.getsignal(signal.SIGINT)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        signal.signal(signal.SIGINT, self.original_sigint_handler)
 
 
 class FridaProcess:
@@ -34,6 +47,22 @@ class FridaProcess:
         subprocess.Popen(cmd_kill_frida, stdin=subprocess.PIPE, shell=True)
 
 
+def input_swallowing_interrupt(_input):
+    def _input_swallowing_interrupt(*args):
+        try:
+            return _input(*args)
+
+        except KeyboardInterrupt:
+            print('^C')
+            return '\n'
+
+        except EOFError:
+            print('exit')
+            return 'exit\n'
+
+    return _input_swallowing_interrupt
+
+
 # noinspection PyBroadException
 # noinspection PyUnusedLocal
 class BadadaShell(cmd.Cmd):
@@ -43,12 +72,30 @@ class BadadaShell(cmd.Cmd):
     script = None
     log = None
     usb_device = None
+    stdout_supressed = False
+    fd_null = None
+    stdout_bkp = None
     child_gating_hooks = {}
     child_gating_sessions = set()
     hook_lock = Lock()
+    shouldStopFlag = False
+    shouldStopFlagLock = Lock()
+
+    def cmdloop(self, *args, **kwargs):
+        old_input_fn = cmd.__builtins__['input']
+        cmd.__builtins__['input'] = input_swallowing_interrupt(old_input_fn)
+        try:
+            super().cmdloop(*args, **kwargs)
+        finally:
+            cmd.__builtins__['input'] = old_input_fn
 
     def __init__(self):
         cmd.Cmd.__init__(self)
+
+        # super().__init__(stdin=_CmdWrapper(sys.stdin))
+        # self.use_rawinput = False
+        self.prompt = '\033[1m' + '\033[92m' + 'badada> ' + '\033[0m'
+        # cmd.Cmd.__init__(self)
 
         self.aliases = {
             'exit': self.do_quit
@@ -287,7 +334,7 @@ class BadadaShell(cmd.Cmd):
         elif command in self.aliases:
             self.aliases[command](arg)
         else:
-            print('[-] Command not found')
+            print('[-] Command "{0}" not found'.format(line))
 
     @staticmethod
     def get_file_contents(file_name):
@@ -299,6 +346,14 @@ class BadadaShell(cmd.Cmd):
 
     def on_message(self, message, data):
         if 'payload' in message.keys():
+            if message['payload'] == 'shouldStopSyncMsg':
+                self.default_rpc_methods.post({'type': 'shouldStopSyncMsg', 'payload': self.shouldStopFlag})
+                return
+
+            elif message['payload'] == 'stoppedSyncMsg':
+                self.shouldStopFlag = False
+                return
+
             if self.log:
                 log_file = open("logs/" + self.log, 'a')
                 log_file.write(str(time.asctime()))
@@ -339,12 +394,53 @@ class BadadaShell(cmd.Cmd):
 
         return self.script
 
+    def stop_and_reload_default_rpc_methods(self):
+        if self.default_rpc_methods:
+            self.default_rpc_methods.unload()
+
+        self.default_rpc_methods = self.load_script(
+            os.path.join(os.path.dirname(os.path.realpath(__file__)), 'scripts/', 'scriptsRPC.js'))
+
+    def supress_stdout(self):
+        if not self.stdout_supressed:
+            self.stdout_supressed = True
+
+            if self.fd_null is None:
+                self.fd_null = open(os.devnull, 'w')
+
+            self.stdout_bkp = sys.stdout
+            sys.stdout = self.fd_null
+
+    def restore_stdout(self):
+        if self.stdout_supressed:
+            self.stdout_supressed = False
+            sys.stdout = self.stdout_bkp
+
+            self.fd_null.close()
+            self.fd_null = None
+
+            self.stdout_bkp = None
+
+    def abort_default_rpc_execution(self):
+        with NotAbortable():
+            self.supress_stdout()
+            self.stdout_bkp.write('\n\n[*] Aborting. Please wait...\n')
+            self.shouldStopFlag = True
+
+            while self.shouldStopFlag:
+                time.sleep(0.5)
+
+            self.restore_stdout()
+
     def get_classes(self, contains_text):
         if not self.default_rpc_methods:
             print('[-] Seems that there is no hook')
             return
 
-        self.default_rpc_methods.exports.getclasses(contains_text)
+        try:
+            self.default_rpc_methods.exports.getclasses(contains_text)
+        except KeyboardInterrupt:
+            self.abort_default_rpc_execution()
 
     def get_methods_with_signature(self, class_name, contains_text):
         if not self.default_rpc_methods:
@@ -357,8 +453,11 @@ class BadadaShell(cmd.Cmd):
         if not self.default_rpc_methods:
             print('[-] Seems that there is no hook')
             return
-      
-        self.default_rpc_methods.exports.searchmethod(method_name)
+
+        try:
+            self.default_rpc_methods.exports.searchmethod(method_name)
+        except KeyboardInterrupt:
+            self.abort_default_rpc_execution()
     
     def cleanup(self):
         print('[*] Detaching from childs...')
@@ -407,18 +506,19 @@ class BadadaShell(cmd.Cmd):
         if not self.args.javascript:
             print('[*] There is no script to reload.')
             return
-        
-        if self.script:
-            print('[*] Unloading current script...')
-            self.script.unload()
-            self.script = None
 
-        print('[*] Reloading {0}'.format(self.args.javascript))
-        try:
-            self.script = self.load_script(self.args.javascript)
-        except IOError:
-            print('[-] Unable load script "{0}": file not found.'.format(self.args.javascript))
-            self.script = None
+        with NotAbortable():
+            if self.script:
+                print('[*] Unloading current script...')
+                self.script.unload()
+                self.script = None
+
+            print('[*] Reloading {0}'.format(self.args.javascript))
+            try:
+                self.script = self.load_script(self.args.javascript)
+            except IOError:
+                print('[-] Unable load script "{0}": file not found.'.format(self.args.javascript))
+                self.script = None
 
     @staticmethod
     def help_reload():
@@ -427,8 +527,10 @@ class BadadaShell(cmd.Cmd):
     def do_unload(self, in_args):
         if self.args.javascript and self.script:
             print('[*] Unloading current script...')
-            self.script.unload()
-            self.script = None
+
+            with NotAbortable():
+                self.script.unload()
+                self.script = None
         else:
             print('[-] There is no script to unload')
 
@@ -438,19 +540,20 @@ class BadadaShell(cmd.Cmd):
             print('\n[-] Usage load [<script.js>]\n')
 
         else:
-            if self.args.javascript and self.script:
-                print('[*] Unloading current script...')
-                self.script.unload()
-                self.script = None
-            
-            print('[*] Loading new script...')
-            self.args.javascript = args[0]
-            
-            try:
-                self.script = self.load_script(self.args.javascript)
-            except IOError:
-                print('[-] Unable load script "{0}": file not found.'.format(self.args.javascript))
-                self.script = None
+            with NotAbortable():
+                if self.args.javascript and self.script:
+                    print('[*] Unloading current script...')
+                    self.script.unload()
+                    self.script = None
+
+                print('[*] Loading new script...')
+                self.args.javascript = args[0]
+
+                try:
+                    self.script = self.load_script(self.args.javascript)
+                except IOError:
+                    print('[-] Unable load script "{0}": file not found.'.format(self.args.javascript))
+                    self.script = None
 
     @staticmethod
     def help_load():
@@ -475,11 +578,18 @@ class BadadaShell(cmd.Cmd):
         args = in_args.strip().split(" ")
         if len(args) < 1:
             print('\n[-] Usage: generatehooks <className> [methodNameFilter]\n')
+            return
 
         elif len(args) == 1:
-            self.default_rpc_methods.exports.generatehooks(args[0], "")
+            second_arg = ''
+
         else:
-            self.default_rpc_methods.exports.generatehooks(args[0], args[1])
+            second_arg = args[1]
+
+        try:
+            self.default_rpc_methods.exports.generatehooks(args[0], second_arg)
+        except KeyboardInterrupt:
+            self.abort_default_rpc_execution()
 
     @staticmethod
     def help_searchmethod():
@@ -500,11 +610,17 @@ class BadadaShell(cmd.Cmd):
         args = in_args.strip().split(" ")
         if len(args) < 1:
             print('\n[-] Usage: getmethods <className> [<contains_this>]\n')
+            return
 
         elif len(args) == 1:
-            self.get_methods_with_signature(args[0], "")
+            second_arg = ''
         else:
-            self.get_methods_with_signature(args[0], args[1])
+            second_arg = args[1]
+
+        try:
+            self.get_methods_with_signature(args[0], second_arg)
+        except KeyboardInterrupt:
+            self.abort_default_rpc_execution()
 
     @staticmethod
     def help_methods():
@@ -520,43 +636,44 @@ class BadadaShell(cmd.Cmd):
             print('\n[-] Usage hook <process_to_hook>\n')
 
         else:
-            if self.default_rpc_methods:
-                print('[*] Unloading default RPC methods')
+            with NotAbortable():
+                if self.default_rpc_methods:
+                    print('[*] Unloading default RPC methods')
+                    try:
+                        self.default_rpc_methods.unload()
+                    except frida.InvalidOperationError:
+                        pass
+                    finally:
+                        self.default_rpc_methods = None
+
+                if self.args.javascript and self.script:
+                    print('[*] Unloading current script...')
+                    self.script.unload()
+                    self.script = None
+
+                print('[*] Detaching current session.')
+                self.session.detach()
+
+                print('[*] Attaching to ' + args[0] + '.')
+
                 try:
-                    self.default_rpc_methods.unload()
-                except frida.InvalidOperationError:
-                    pass
-                finally:
-                    self.default_rpc_methods = None
+                    self.session = self.usb_device.attach(args[0])
 
-            if self.args.javascript and self.script:
-                print('[*] Unloading current script...')
-                self.script.unload()
-                self.script = None
+                    if self.args.enable_jit:
+                        if self.args.verbose:
+                            print('[*] Enabling JIT...')
 
-            print('[*] Detaching current session.')
-            self.session.detach()
+                        self.session.enable_jit()
 
-            print('[*] Attaching to ' + args[0] + '.')
+                    self.default_rpc_methods = self.load_script(
+                        os.path.join(os.path.dirname(os.path.realpath(__file__)), 'scripts/', 'scriptsRPC.js'))
 
-            try:
-                self.session = self.usb_device.attach(args[0])
-
-                if self.args.enable_jit:
-                    if self.args.verbose:
-                        print('[*] Enabling JIT...')
-
-                    self.session.enable_jit()
-
-                self.default_rpc_methods = self.load_script(
-                    os.path.join(os.path.dirname(os.path.realpath(__file__)), 'scripts/', 'scriptsRPC.js'))
-
-                self.args.javascript = None
-            except frida.ServerNotRunningError:
-                print('[-] Unable to connect to frida-server.')
-                return
-            except frida.ProcessNotFoundError:
-                print('[-] Unable to find the process to attach.')
+                    self.args.javascript = None
+                except frida.ServerNotRunningError:
+                    print('[-] Unable to connect to frida-server.')
+                    return
+                except frida.ProcessNotFoundError:
+                    print('[-] Unable to find the process to attach.')
 
     @staticmethod
     def help_hook():
@@ -565,12 +682,9 @@ class BadadaShell(cmd.Cmd):
 
 if __name__ == '__main__':
     prompt = BadadaShell()
-    prompt.prompt = '\033[1m' + '\033[92m' + 'badada> ' + '\033[0m'
 
     try:
         prompt.cmdloop()
-    except KeyboardInterrupt as err:
-        print('[*] CTRL+C detected...')
     except Exception as e:
         print('[-] Exception: {0}'.format(e))
     finally:
