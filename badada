@@ -426,11 +426,30 @@ class BadadaShell(cmd.Cmd):
             self.supress_stdout()
             self.stdout_bkp.write('\n\n[*] Aborting. Please wait...\n')
             self.shouldStopFlag = True
+            count = 0
 
             while self.shouldStopFlag:
+                count += 1
+
+                if count == 20:
+                    self.stdout_bkp.write('\n[*] Something is wrong. Trying to force abort. Please wait...\n')
+                    self.stop_and_reload_default_rpc_methods()
+                    break
+
                 time.sleep(0.5)
 
             self.restore_stdout()
+
+    def get_objects(self, class_name, hash_code_filter):
+        if not self.default_rpc_methods:
+            print('[-] Seems that there is no hook')
+            return
+
+        try:
+            self.default_rpc_methods.exports.getobjects(class_name, hash_code_filter)
+        except KeyboardInterrupt:
+            self.abort_default_rpc_execution()
+
 
     def get_classes(self, contains_text):
         if not self.default_rpc_methods:
@@ -559,10 +578,25 @@ class BadadaShell(cmd.Cmd):
     def help_load():
         print('\nLoads a javascript code to be injected.\n')
 
+    @staticmethod
+    def help_objects():
+        print('\nEnumerate objects of the specified class and print its attributes')
+
+    def do_objects(self, in_args):
+        args = in_args.strip().split(' ')
+        if len(args) > 2 or (len(args) == 1 and args[0] == ''):
+            print('\n[-] Usage: objects <className> [<objectHashCode>]\n')
+            return
+
+        if len(args) == 1:
+            self.get_objects(args[0], '')
+        elif len(args) == 2:
+            self.get_objects(args[0], args[1])
+
     def do_classes(self, in_args):
         args = in_args.strip().split(" ")
         if len(args) > 1:
-                print('\n[-] Usage getclasses [<contains_this>]')
+                print('\n[-] Usage: classes [<contains_this>]')
 
         elif len(args) == 0:
             self.get_classes('')

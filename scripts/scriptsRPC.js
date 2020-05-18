@@ -41,6 +41,73 @@ rpc.exports = {
         });
     },
 
+    // getObjects with exact name "className"
+    getobjects: function(className, hashCodeFilter) {
+        Java.perform(function() {
+            send("[*] Enumerating " + className + " objects...");
+            var shouldStopFlag = false;
+            var auxCount = 0;
+            var output = '';
+
+            try {
+                var clazz = Java.use(className);
+            } catch(e) {
+                send("[-] Class " + className + " not found. Aborting\n");
+                return;
+            }
+
+            Java.choose(className, {
+                onMatch: function(instance) {
+                    if(hashCodeFilter != '' && instance.hashCode() != hashCodeFilter) {
+                        return;
+                    }
+
+                    auxCount += 1
+                    if(shouldStopFlag == false && auxCount % 100 == 0) {
+                        send('shouldStopSyncMsg');
+                        var op = recv('shouldStopSyncMsg', function(value) {
+                            shouldStopFlag = value.payload;
+                        });
+
+                        op.wait();
+                    }
+
+                    if(shouldStopFlag) {
+                        return 'stop';
+                    }
+
+                    var fields = Object.getOwnPropertyNames(instance);
+                    var message = 'Listing object[hashCode:' + instance.hashCode() + "] attributes:\n";
+
+                    fields = fields.sort();
+                    for(var i = 0; i < fields.length; i++) {
+                        var field = fields[i];
+
+                        if(field == 'shadow$_klass_' || field == 'shadow$_monitor_') {
+                            continue;
+                        }
+                        else if(typeof instance[field] === 'object') {
+                            var attributeValue = instance[field].value;
+
+                            message += "\t" + field + ': ' + attributeValue + "\n";
+                        }
+                    }
+
+                    send(message);
+                },
+                onComplete: function (){
+                    if(shouldStopFlag) {
+                        send('stoppedSyncMsg');
+                        shouldStopFlag = false;
+                        return;
+                    }
+
+                    send("[*] Done!");
+                }
+            });
+        });
+    },
+
     // Search Methods in all classes
     searchmethod: function(methodToSearch){
         Java.perform(function(){
