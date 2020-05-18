@@ -42,7 +42,7 @@ class FridaProcess:
 
     @staticmethod
     def terminate():
-        cmd_kill_frida = 'adb shell "killall -9 frida-server"'
+        cmd_kill_frida = 'adb shell "killall -s QUIT frida-server"'
         print('[*] Terminating frida-server...')
         subprocess.Popen(cmd_kill_frida, stdin=subprocess.PIPE, shell=True)
 
@@ -91,11 +91,7 @@ class BadadaShell(cmd.Cmd):
 
     def __init__(self):
         cmd.Cmd.__init__(self)
-
-        # super().__init__(stdin=_CmdWrapper(sys.stdin))
-        # self.use_rawinput = False
         self.prompt = '\033[1m' + '\033[92m' + 'badada> ' + '\033[0m'
-        # cmd.Cmd.__init__(self)
 
         self.aliases = {
             'exit': self.do_quit
@@ -105,6 +101,7 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('processToHook', help='Name of the process to be attached')
         parser.add_argument('-j', '--javascript', help='Path to javascript code file to inject')
         parser.add_argument('--log', help='Save output to path')
+        parser.add_argument('--ignore-selinux-check', help='Do not check SELinux status', action='store_true')
         parser.add_argument('--spawn', action='store_true', help='Frida injects into Zygote, spawns processToHook '
                                                                  'and waits for input. Similar to running '
                                                                  'Frida with -f flag')
@@ -146,6 +143,65 @@ class BadadaShell(cmd.Cmd):
 
                 print('[-] frida-server does not exist in /data/local/tmp/frida-server')
                 return
+
+            print('[*] Checking if adb is running as root...')
+            if subprocess.check_output(['adb shell id -u'],
+                                       shell=True).strip() != b'0':
+
+                print('[-] adb is not running as root')
+                return
+
+            if not self.args.ignore_selinux_check:
+                print('[*] Checking SELinux status...')
+
+                selinux_enforcing = None
+                selinux_tools_present = True
+
+                try:
+                    output = subprocess.check_output(['adb shell getenforce'], shell=True,
+                                                     stderr=subprocess.STDOUT).strip()
+
+                    if output.lower() == b'enforcing':
+                        selinux_enforcing = True
+                    else:
+                        selinux_enforcing = False
+
+                    selinux_tools_present = True
+
+                except subprocess.CalledProcessError as e:
+                    selinux_enforcing = False
+                    selinux_tools_present = False
+
+                if selinux_tools_present and selinux_enforcing:
+                    print('[*] SELinux is enforcing. This may cause problems in some devices.')
+                    resp = input('[*] Do you want to "setenforce 0"? [y/N]: ').lower()
+
+                    if resp in ['y', 'yes']:
+                        success = False
+
+                        try:
+                            subprocess.check_output(['adb shell setenforce 0'], shell=True,
+                                                    stderr=subprocess.STDOUT)
+
+                            output = subprocess.check_output(['adb shell getenforce'], shell=True,
+                                                    stderr=subprocess.STDOUT).strip()
+
+                            if output.lower() == b'permissive':
+                                success = True
+
+                            elif output.lower() != b'enforcing':
+                                print('[*] SELinux is in an unknown state. Assuming it is permissive.')
+                                success = True
+
+                        except subprocess.CalledProcessError as e:
+                            success = False
+                            print('[-] An error ocurred during "setenforce 0" - {0}'.format(e))
+
+                        if success:
+                            print('[*] SELinux was set to "permissive"')
+                        else:
+                            print('[-] Not able to set SELinux status to "permissive". Aborting.')
+                            return
 
             self.frida_server = FridaProcess()
             self.frida_server.run()
@@ -449,7 +505,6 @@ class BadadaShell(cmd.Cmd):
             self.default_rpc_methods.exports.getobjects(class_name, hash_code_filter)
         except KeyboardInterrupt:
             self.abort_default_rpc_execution()
-
 
     def get_classes(self, contains_text):
         if not self.default_rpc_methods:
