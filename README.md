@@ -31,6 +31,7 @@ adb shell setenforce 0
 This section will explain how to perform the first step of using Badada. After this first step you will be able to use the Badada Command Line Interface to run other commands.
 
 After installing badada and placing frida-server in **/data/local/tmp/frida-server**, you can:
+
 - **Hook running Android apps by specifying its name**
     ```
     badada com.example.app
@@ -78,36 +79,54 @@ After installing badada and placing frida-server in **/data/local/tmp/frida-serv
 
 #### Command Line features
 After hooking a process badada will show a cmd. You can use some built-in commands to help you to reverse engineer an application.
+
+If you ran any of the below commands but regretted of it and want to abort, just press `CTRL + C` and wait some seconds.
+
 *We do recommend using the below commands only if you are not using child gating.*
 
 - **List loaded classes**
+
     ```
     classes
     ```
 
 - **List loaded classes with filter**
+
     ```
     classes keystore
     ```
 
 - **List methods of a class**
+
     ```
     methods java.security.KeyStore
     ```
 
 - **List methods of a class with filter**
+
     ```
     methods java.security.KeyStore load
     ```
 
 - **Search for a method in application classes**
+
     Note that this can take long time, since badada search for the method name in all application classes
     ```
     searchmethod isDeviceRooted
     ```
 
 - **Generate a Frida's hooks for all methods**
+
     You can use badada to generate a hook script skeleton for all methods of a specified class
     ```
     generatehooks java.security.KeyStore
     ```
+
+- **Enumerate all alive objects of a specified class **
+
+    You can list all objects of a specified class and print its attributes
+    
+    ```
+    objects android.database.sqlite.SQLiteQuery
+    ```
+
