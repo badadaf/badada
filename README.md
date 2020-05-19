@@ -115,14 +115,14 @@ If you ran any of the below commands but regretted of it and want to abort, just
     searchmethod isDeviceRooted
     ```
 
-- **Generate a Frida's hooks for all methods**
+- **Generate a Frida hooks for all methods**
 
     You can use badada to generate a hook script skeleton for all methods of a specified class
     ```
     generatehooks java.security.KeyStore
     ```
 
-- **Enumerate all alive objects of a specified class **
+- **Enumerate all alive objects of a specified class**
 
     You can list all objects of a specified class and print its attributes
     
