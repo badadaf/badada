@@ -11,6 +11,7 @@ import signal
 import argparse
 import subprocess
 from threading import Lock
+from threading import Thread
 
 
 class NotAbortable:
@@ -184,7 +185,7 @@ class BadadaShell(cmd.Cmd):
                                                     stderr=subprocess.STDOUT)
 
                             output = subprocess.check_output(['adb shell getenforce'], shell=True,
-                                                    stderr=subprocess.STDOUT).strip()
+                                                             stderr=subprocess.STDOUT).strip()
 
                             if output.lower() == b'permissive':
                                 success = True
@@ -532,40 +533,65 @@ class BadadaShell(cmd.Cmd):
             self.default_rpc_methods.exports.searchmethod(method_name)
         except KeyboardInterrupt:
             self.abort_default_rpc_execution()
-    
-    def cleanup(self):
+
+    def detach_from_childs(self):
         print('[*] Detaching from childs...')
 
         for child_session in list(self.child_gating_sessions):
             child_session.detach()
 
+    def unload_default_rpc_methods(self):
+        print('[*] Unloading default RPC methods')
+
+        try:
+            self.default_rpc_methods.unload()
+        except frida.InvalidOperationError:
+            pass
+        finally:
+            self.default_rpc_methods = None
+
+    def unload_current_script(self):
+        print('[*] Unloading current script...')
+
+        try:
+            self.script.unload()
+        except frida.InvalidOperationError:
+            pass
+        finally:
+            self.script = None
+
+    def detach_current_session(self):
+        print('[*] Detaching current session.')
+
+        try:
+            self.session.detach()
+        except frida.InvalidOperationError:
+            pass
+        finally:
+            self.session = None
+
+    def cleanup(self):
+        # Below actions are in Threads because it needs a timeout
+
+        t = Thread(target=self.detach_from_childs, args=[])
+        t.start()
+        t.join(timeout=5)
+
         if self.default_rpc_methods:
-            print('[*] Unloading default RPC methods')
-            try:
-                self.default_rpc_methods.unload()
-            except frida.InvalidOperationError:
-                pass
-            finally:
-                self.default_rpc_methods = None
+            t = Thread(target=self.unload_default_rpc_methods, args=[])
+            t.start()
+            t.join(timeout=5)
 
         if self.script:
-            print('[*] Unloading current script...')
-            try:
-                self.script.unload()
-            except frida.InvalidOperationError:
-                pass
-            finally:
-                self.script = None
+            t = Thread(target=self.unload_current_script, args=[])
+            t.start()
+            t.join(timeout=5)
 
-        print('[*] Detaching current session.')
         if self.session is not None:
-            try:
-                self.session.detach()
-            except frida.InvalidOperationError:
-                pass
-            finally:
-                self.session = None
-    
+            t = Thread(target=self.detach_current_session, args=[])
+            t.start()
+            t.join(timeout=5)
+
         print('[*] Exiting...\n')
         print('[*] Thanks for using Badada! Bye \\o/')
 
