@@ -28,19 +28,41 @@ rpc.exports = {
                         var message = entry.toString();
 
                         if(shouldIntrospect) {
-                            var Clazz = Java.use(entry);
-                            var fields = Clazz.class.getDeclaredFields();
+                            try{
+                                var Clazz = Java.use(entry);
 
-                            message += " -> [introspect]:\n";
+                                if(Clazz != null) {
+                                    var fields = Clazz.class.getDeclaredFields();
 
-                            for(var i = 0; i < fields.length; i++){
-                                var f = fields[i];
-                                var accessible = f.isAccessible();
-                                f.setAccessible(true);
+                                    if(fields != null) {
+                                        message += " -> [introspect]:\n";
 
-                                message += "\t" + f.getName() + ': ' + f.get(null) + "\n";
+                                        for(var i = 0; i < fields.length; i++){
+                                            var f = fields[i];
 
-                                f.setAccessible(accessible);
+                                            if(f == null) {
+                                                continue;
+                                            }
+
+                                            var accessible = f.isAccessible();
+                                            f.setAccessible(true);
+
+                                            var value = null;
+
+                                            try {
+                                                value = f.get(null)
+                                            } catch(err) {
+                                            }
+
+                                            message += "\t" + f.getName() + ': ' + value + "\n";
+
+                                            f.setAccessible(accessible);
+                                        }
+                                    }
+                                }
+
+                            } catch(err) {
+                                message += "error while introspecting: " + err;
                             }
                         }
 
