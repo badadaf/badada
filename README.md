@@ -96,6 +96,12 @@ If you ran any of the below commands but regretted of it and want to abort, just
     classes keystore
     ```
 
+- **Introspect a loaded class (show its attribute values)**
+
+    ```
+    classes BuildConfig introspect
+    ```
+
 - **List methods of a class**
 
     ```
