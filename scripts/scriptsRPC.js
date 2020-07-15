@@ -2,7 +2,7 @@
 
 rpc.exports = {
     // getClasses that containsThis
-    getclasses: function(containsThis) {
+    getclasses: function(containsThis, shouldIntrospect) {
         Java.perform(function() {
             send("[*] Enumerating classes...");
             var shouldStopFlag = false;
@@ -25,7 +25,26 @@ rpc.exports = {
                     }
 
                     if (entry.toString().toLowerCase().search(containsThis.toLowerCase()) != -1) {
-                        send(entry.toString());
+                        var message = entry.toString();
+
+                        if(shouldIntrospect) {
+                            var Clazz = Java.use(entry);
+                            var fields = Clazz.class.getDeclaredFields();
+
+                            message += " -> [introspect]:\n";
+
+                            for(var i = 0; i < fields.length; i++){
+                                var f = fields[i];
+                                var accessible = f.isAccessible();
+                                f.setAccessible(true);
+
+                                message += "\t" + f.getName() + ': ' + f.get(null) + "\n";
+
+                                f.setAccessible(accessible);
+                            }
+                        }
+
+                        send(message)
                     }
                 },
                 onComplete: function (){
