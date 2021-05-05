@@ -302,7 +302,7 @@ rpc.exports = {
 
             var classFullPathNameSplitted = classFullPathName.split('.');
             var className = classFullPathNameSplitted[classFullPathNameSplitted.length - 1];
-            var classNiceName = className.replace(new RegExp('\\$', 'g'), '_');
+            var classNiceName = className.replace(new RegExp('\\$', 'g'), '_').replace('-', '_');
 
             var scriptString = 'Java.perform(function(){\n';
             scriptString += '\tvar ' + classNiceName + ' = Java.use("' + classFullPathName + '");\n\n';
@@ -349,8 +349,8 @@ rpc.exports = {
                     overloads.forEach(function(overload){
                         var argTypes = overload.argumentTypes;
 
-                        scriptString += "\t////Constructor Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
-                        scriptString += '\t//' + classNiceName + '.$init';
+                        scriptString += "\t//Constructor Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
+                        scriptString += '\t' + classNiceName + "['$init']";
 
                         if(overloads.length > 1){
                             scriptString += '.overload(';
@@ -379,8 +379,7 @@ rpc.exports = {
                         }
 
                         scriptString += '){\n';
-                        scriptString += '\t//\tsend("Entering ' + classNiceName + "." + "$init" + '");\n';
-                        scriptString += '\t//\tvar originalResult = this.' + "$init" + '(';
+                        scriptString += "\t\tvar originalResult = this['" + "$init']" + '(';
 
                         for(var j = 0; j < argTypes.length; j++){
                             if(j == argTypes.length - 1){
@@ -391,10 +390,31 @@ rpc.exports = {
                             }
                         }
 
-                        scriptString += ');\n';
-                        scriptString += '\t//\tsend("Leaving ' + classNiceName + "." + "$init" + '");\n';
-                        scriptString += '\t//\treturn originalResult;\n';
-                        scriptString += '\t//};\n\n';
+                        scriptString += ');\n\n';
+
+                        if(argTypes.length > 0){
+                            scriptString += '\t\tsend("';
+
+                            scriptString += classNiceName + "." + '$init params: " + ';
+
+                            for(var j = 0; j < argTypes.length; j++){
+                                if(j == argTypes.length - 1){
+                                    scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString();
+                                }
+                                else{
+                                    scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString() + ' + ", " + ';
+                                }
+                            }
+
+                            scriptString += ');\n\n';
+                        }
+                        else{
+                            scriptString += '\t\tsend("';
+                            scriptString += classNiceName + "." + '$init called. There are no params.");\n\n';
+                        }
+
+                        scriptString += '\t\treturn originalResult;\n';
+                        scriptString += '\t};\n\n';
                     });
                 }
             }
@@ -442,8 +462,8 @@ rpc.exports = {
                     overloads.forEach(function(overload){
                         var argTypes = overload.argumentTypes;
 
-                        scriptString += "\t////Method Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
-                        scriptString += '\t//' + classNiceName + '.' + methodName;
+                        scriptString += "\t//Method Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
+                        scriptString += '\t' + classNiceName + "['" + methodName + "']";
 
                         if(overloads.length > 1){
                             scriptString += '.overload(';
@@ -473,8 +493,7 @@ rpc.exports = {
                         }
 
                         scriptString += '){\n';
-                        scriptString += '\t//\tsend("Entering ' + classNiceName + "." + methodName + '");\n';
-                        scriptString += '\t//\tvar originalResult = this.' + methodName + '(';
+                        scriptString += "\t\tvar originalResult = this['" + methodName + "'](";
 
                         for(var j = 0; j < argTypes.length; j++){
                             if(j == argTypes.length - 1){
@@ -485,10 +504,32 @@ rpc.exports = {
                             }
                         }
 
-                        scriptString += ');\n';
-                        scriptString += '\t//\tsend("Leaving ' + classNiceName + "." + methodName + '");\n';
-                        scriptString += '\t//\treturn originalResult;\n';
-                        scriptString += '\t//};\n\n';
+                        scriptString += ');\n\n';
+
+                        if(argTypes.length > 0) {
+                            scriptString += '\t\tsend("';
+
+                            scriptString += classNiceName + "." + methodName + ' params: " + ';
+
+                            for(var j = 0; j < argTypes.length; j++){
+                                if(j == argTypes.length - 1){
+                                    scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString();
+                                }
+                                else{
+                                    scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString() + ' + ", " + ';
+                                }
+                            }
+
+                            scriptString += ');\n\n';
+                        }
+                        else{
+                            scriptString += '\t\tsend("';
+                            scriptString += classNiceName + "." + methodName + ' called. There are no params.");\n\n';
+                        }
+
+
+                        scriptString += '\t\treturn originalResult;\n';
+                        scriptString += '\t};\n\n';
                     });
                 }
             }
