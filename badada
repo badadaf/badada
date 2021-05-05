@@ -320,6 +320,9 @@ class BadadaShell(cmd.Cmd):
                 app, hook_file = arg.split('=')
                 print('[+] Child-Gating parser - APP: {0} HOOK: {1}'.format(str(app), str(hook_file)))
 
+                if app == '*':
+                    print('[+] Detected wildcard (*). Will hook all children!')
+
                 if not os.path.isfile(hook_file):
                     print('[-] File {0} not found'.format(hook_file))
                     raise Exception('Argument Parsing error')
@@ -349,7 +352,7 @@ class BadadaShell(cmd.Cmd):
             print('\n[*] New Child: process_name={0} (pid={1}, ppid={2})'
                   .format(child.identifier, child.pid, child.parent_pid))
 
-        if child.identifier in self.child_gating_hooks.keys():
+        if child.identifier in self.child_gating_hooks.keys() or '*' in self.child_gating_hooks.keys():
             print('[*] Hooking pid {0} - (process_name={1}, ppid={2})'
                   .format(child.pid, child.identifier, child.parent_pid))
 
@@ -369,7 +372,11 @@ class BadadaShell(cmd.Cmd):
 
                 session.enable_child_gating()
 
-            hook_source = self.get_file_contents(self.child_gating_hooks[child.identifier])
+            if '*' in self.child_gating_hooks.keys():
+                hook_source = self.get_file_contents(self.child_gating_hooks['*'])
+
+            else:
+                hook_source = self.get_file_contents(self.child_gating_hooks[child.identifier])
 
             self.script = session.create_script(hook_source)
             self.script.on('message', self.on_message)
