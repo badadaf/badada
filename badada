@@ -135,7 +135,20 @@ class BadadaShell(cmd.Cmd):
         subprocess.call(['adb', 'start-server'])
 
         print('[*] Waiting until the device is connected to the USB port...')
-        os.system('adb wait-for-device')
+
+        try:
+            subprocess.check_output(['adb wait-for-device'], shell=True, timeout=300)
+            print('[*] Device connected')
+
+        except subprocess.TimeoutExpired as error:
+            print('[-] Could not connect to device. Timed out after {0} seconds'.format(error.timeout))
+
+            raise SystemExit
+
+        except KeyboardInterrupt:
+            print('[*] Exiting...')
+
+            raise SystemExit
 
         if self.args.processToHook != 'Gadget':
             print('[*] Checking if frida-server is located at tmp dir...')
@@ -175,7 +188,14 @@ class BadadaShell(cmd.Cmd):
 
                 if selinux_tools_present and selinux_enforcing:
                     print('[*] SELinux is enforcing. This may cause problems in some devices.')
-                    resp = input('[*] Do you want to "setenforce 0"? [y/N]: ').lower()
+
+                    try:
+                        resp = input('[*] Do you want to "setenforce 0"? [y/N]: ').lower()
+
+                    except KeyboardInterrupt:
+                        print('[*] Exiting...')
+
+                        raise SystemExit
 
                     if resp in ['y', 'yes']:
                         success = False
