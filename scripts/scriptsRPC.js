@@ -225,7 +225,6 @@ rpc.exports = {
                     try{
                         var classX = getClassFromAnyClassLoader(entry.toString());
                     } catch(err){
-                        send("[!] Class not found: " + entry.toString());
                         return;
                     }
 
