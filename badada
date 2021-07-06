@@ -457,7 +457,7 @@ class BadadaShell(cmd.Cmd):
                 log_file.close()
                 
             sys.stdout.write('\n')
-            sys.stdout.write(message['stack'] + '\n\n')
+            sys.stdout.write(message.get('stack', str(message)) + '\n\n')
 
         else:
             if self.log:
