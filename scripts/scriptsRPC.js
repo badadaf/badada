@@ -352,7 +352,13 @@ rpc.exports = {
             var classNiceName = className.replace(new RegExp('\\$', 'g'), '_').replace('-', '_');
 
             var scriptString = 'Java.perform(function(){\n';
-            scriptString += '\tvar ' + classNiceName + ' = Java.use("' + classFullPathName + '");\n\n';
+            scriptString += '\tfunction getClassFromAnyClassLoader(className) {\n\t\tvar clazz = null;\n\n\t\ttry {\n';
+            scriptString += '\t\t\tclazz = Java.use(className);\n\t\t\treturn clazz;\n\t\t}\n\t\tcatch(error) {\n\t\t\tvar classLoaders = Java.enumerateClassLoadersSync();\n';
+            scriptString += '\t\t\tfor(var i = 0; i < classLoaders.length; i++) {\n\t\t\t\ttry {\n\t\t\t\t\tvar classFactory = Java.ClassFactory.get(classLoaders[i]);\n';
+            scriptString += '\t\t\t\t\tclazz = classFactory.use(className);\n\t\t\t\t\treturn clazz;\n\t\t\t\t}\n\t\t\t\tcatch(error) {}\n\t\t\t}\n\t\t}\n';
+            scriptString += '\t\tthrow new Error("Could not find the class " + className + " in any class loader");\n\t}\n\n';
+
+            scriptString += '\tvar ' + classNiceName + ' = getClassFromAnyClassLoader("' + classFullPathName + '");\n\n';
 
             var ClazzConstructors = Clazz.class.getDeclaredConstructors();
             var methodNameCount = {};
