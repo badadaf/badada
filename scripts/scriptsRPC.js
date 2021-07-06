@@ -1,5 +1,51 @@
 'use strict';
 
+function getClassFromAnyClassLoader(className) {
+    var clazz = null;
+
+    try {
+        clazz = Java.use(className);
+        return clazz;
+    }
+    catch(error) {
+        var classLoaders = Java.enumerateClassLoadersSync();
+
+        for(var i = 0; i < classLoaders.length; i++) {
+            try {
+                var classFactory = Java.ClassFactory.get(classLoaders[i]);
+                clazz = classFactory.use(className);
+                return clazz;
+            }
+            catch(error) {}
+        }
+    }
+
+    throw new Error("Couldn't find the class '" + className + "' in any class loader");
+}
+
+function getAnyClassFactoryFor(className) {
+    var clazz = null;
+
+    try {
+        clazz = Java.use(className);
+        return Java.ClassFactory.get(Java.classFactory.loader);
+    }
+    catch(error) {
+        var classLoaders = Java.enumerateClassLoadersSync();
+
+        for(var i = 0; i < classLoaders.length; i++) {
+            try {
+                var classFactory = Java.ClassFactory.get(classLoaders[i]);
+                clazz = classFactory.use(className);
+                return classFactory;
+            }
+            catch(error) {}
+        }
+    }
+
+    throw new Error("Couldn't find the class factory for '" + className + "'");
+}
+
 rpc.exports = {
     // getClasses that containsThis
     getclasses: function(containsThis, shouldIntrospect) {
@@ -29,7 +75,7 @@ rpc.exports = {
 
                         if(shouldIntrospect) {
                             try{
-                                var Clazz = Java.use(entry);
+                                var Clazz = getClassFromAnyClassLoader(entry);
 
                                 if(Clazz != null) {
                                     var fields = Clazz.class.getDeclaredFields();
@@ -54,7 +100,7 @@ rpc.exports = {
                                             } catch(err) {
                                             }
 
-                                            message += "\t" + f.getName() + ': ' + value + "\n";
+                                            message += "\t" + f.getName() + ': ' + JSON.stringify(value) + "\n";
 
                                             f.setAccessible(accessible);
                                         }
@@ -91,13 +137,15 @@ rpc.exports = {
             var output = '';
 
             try {
-                var clazz = Java.use(className);
+                var clazz = getClassFromAnyClassLoader(className);
             } catch(e) {
                 send("[-] Class " + className + " not found. Aborting\n");
                 return;
             }
 
-            Java.choose(className, {
+            var classFactory = getAnyClassFactoryFor(className);
+
+            classFactory.choose(className, {
                 onMatch: function(instance) {
                     if(hashCodeFilter != '' && instance.hashCode() != hashCodeFilter) {
                         return;
@@ -130,7 +178,7 @@ rpc.exports = {
                         else if(typeof instance[field] === 'object') {
                             var attributeValue = instance[field].value;
 
-                            message += "\t" + field + ': ' + attributeValue + "\n";
+                            message += "\t" + JSON.stringify(field) + ': ' + JSON.stringify(attributeValue) + "\n";
                         }
                     }
 
@@ -175,7 +223,7 @@ rpc.exports = {
                     }
 
                     try{
-                        var classX = Java.use(entry.toString());
+                        var classX = getClassFromAnyClassLoader(entry.toString());
                     } catch(err){
                         send("[!] Class not found: " + entry.toString());
                         return;
@@ -210,7 +258,7 @@ rpc.exports = {
             var auxCount = 0;
 
             try{
-                var className = Java.use(nameOfClass);
+                var className = getClassFromAnyClassLoader(nameOfClass);
             } catch(err){
                 send("[!] Class not found: " + nameOfClass);
                 return;
@@ -294,7 +342,7 @@ rpc.exports = {
             var auxCount = 0;
 
             try{
-                var Clazz = Java.use(classFullPathName);
+                var Clazz = getClassFromAnyClassLoader(classFullPathName);
             } catch(err){
                 send('ERROR: Class not found: ' + classFullPathName);
                 return;
