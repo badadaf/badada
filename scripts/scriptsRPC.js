@@ -432,18 +432,6 @@ rpc.exports = {
                         }
 
                         scriptString += '){\n';
-                        scriptString += "\t\tvar originalResult = this['" + "$init']" + '(';
-
-                        for(var j = 0; j < argTypes.length; j++){
-                            if(j == argTypes.length - 1){
-                                scriptString += 'p' + (j+1).toString();
-                            }
-                            else{
-                                scriptString += 'p' + (j+1).toString() + ', ';
-                            }
-                        }
-
-                        scriptString += ');\n\n';
 
                         if(argTypes.length > 0){
                             scriptString += '\t\tsend("';
@@ -465,6 +453,19 @@ rpc.exports = {
                             scriptString += '\t\tsend("';
                             scriptString += classNiceName + "." + '$init called. There are no params.");\n\n';
                         }
+
+                        scriptString += "\t\tvar originalResult = this['" + "$init']" + '(';
+
+                        for(var j = 0; j < argTypes.length; j++){
+                            if(j == argTypes.length - 1){
+                                scriptString += 'p' + (j+1).toString();
+                            }
+                            else{
+                                scriptString += 'p' + (j+1).toString() + ', ';
+                            }
+                        }
+
+                        scriptString += ');\n\n';
 
                         scriptString += '\t\treturn originalResult;\n';
                         scriptString += '\t};\n\n';
@@ -546,18 +547,6 @@ rpc.exports = {
                         }
 
                         scriptString += '){\n';
-                        scriptString += "\t\tvar originalResult = this['" + methodName + "'](";
-
-                        for(var j = 0; j < argTypes.length; j++){
-                            if(j == argTypes.length - 1){
-                                scriptString += 'p' + (j+1).toString();
-                            }
-                            else{
-                                scriptString += 'p' + (j+1).toString() + ', ';
-                            }
-                        }
-
-                        scriptString += ');\n\n';
 
                         if(argTypes.length > 0) {
                             scriptString += '\t\tsend("';
@@ -579,6 +568,19 @@ rpc.exports = {
                             scriptString += '\t\tsend("';
                             scriptString += classNiceName + "." + methodName + ' called. There are no params.");\n\n';
                         }
+
+                        scriptString += "\t\tvar originalResult = this['" + methodName + "'](";
+
+                        for(var j = 0; j < argTypes.length; j++){
+                            if(j == argTypes.length - 1){
+                                scriptString += 'p' + (j+1).toString();
+                            }
+                            else{
+                                scriptString += 'p' + (j+1).toString() + ', ';
+                            }
+                        }
+
+                        scriptString += ');\n\n';
 
 
                         scriptString += '\t\treturn originalResult;\n';
