@@ -397,7 +397,15 @@ rpc.exports = {
 
                 if(!(constructorName in methodNameCount)){
                     methodNameCount[constructorName] = 1;
-                    var overloads = Clazz["$init"].overloads;
+
+                    var overloads = [];
+
+                    try {
+                        overloads = Clazz["$init"].overloads;
+                    }
+                    catch(err) {
+                        send('[!] Failed to hook ' + classNiceName + "['$init']");
+                    }
 
                     overloads.forEach(function(overload){
                         var argTypes = overload.argumentTypes;
@@ -511,7 +519,15 @@ rpc.exports = {
 
                 if(!(methodName in methodNameCount)){
                     methodNameCount[methodName] = 1;
-                    var overloads = Clazz[methodName].overloads;
+
+                    var overloads = [];
+
+                    try {
+                        overloads = Clazz[methodName].overloads;
+                    }
+                    catch(err) {
+                        send('[!] Failed to hook ' + classNiceName + "['" + methodName + "']");
+                    }
 
                     overloads.forEach(function(overload){
                         var argTypes = overload.argumentTypes;
