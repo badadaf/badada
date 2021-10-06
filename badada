@@ -297,12 +297,6 @@ class BadadaShell(cmd.Cmd):
             self.hook_lock.release()
             return
 
-        if self.args.enable_jit:
-            if self.args.verbose:
-                print('[*] Enabling JIT...')
-
-            self.session.enable_jit()
-
         if self.args.child_gating:
             self.session.enable_child_gating()
 
@@ -378,12 +372,6 @@ class BadadaShell(cmd.Cmd):
 
             session = self.usb_device.attach(child.pid)
 
-            if self.args.enable_jit:
-                if self.args.verbose:
-                    print('[*] Enabling JIT...')
-
-                session.enable_jit()
-
             session.on('detached', lambda reason: self.on_child_removed(reason, session, child))
 
             if not self.args.avoid_grandchildren_gating:
@@ -398,7 +386,7 @@ class BadadaShell(cmd.Cmd):
             else:
                 hook_source = self.get_file_contents(self.child_gating_hooks[child.identifier])
 
-            self.script = session.create_script(hook_source)
+            self.script = session.create_script(hook_source, runtime='v8' if self.args.enable_jit else 'duk')
             self.script.on('message', self.on_message)
             self.script.load()
 
@@ -472,7 +460,7 @@ class BadadaShell(cmd.Cmd):
 
     def load_script(self, file_name):
         hook_source = self.get_file_contents(file_name)
-        self.script = self.session.create_script(hook_source)
+        self.script = self.session.create_script(hook_source, runtime='v8' if self.args.enable_jit else 'duk')
         self.script.on('message', self.on_message)
         self.script.load()
 
@@ -809,12 +797,6 @@ class BadadaShell(cmd.Cmd):
 
                 try:
                     self.session = self.usb_device.attach(args[0])
-
-                    if self.args.enable_jit:
-                        if self.args.verbose:
-                            print('[*] Enabling JIT...')
-
-                        self.session.enable_jit()
 
                     self.default_rpc_methods = self.load_script(
                         os.path.join(os.path.dirname(os.path.realpath(__file__)), 'scripts/', 'scriptsRPC.js'))
