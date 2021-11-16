@@ -113,7 +113,7 @@ class BadadaShell(cmd.Cmd):
                                                         'child gating feature')
 
         parser.add_argument('--enable-jit', action='store_true', help='Uses V8 as the Javascript Runtime '
-                                                                      'instead of Duktape')
+                                                                      'instead of the default')
 
         parser.add_argument('-r', '--use-su', action='store_true', help='Allows rooted production builds devices to'
                                                                         'escalate root privileges by calling `su -c`')
@@ -389,7 +389,7 @@ class BadadaShell(cmd.Cmd):
             else:
                 hook_source = self.get_file_contents(self.child_gating_hooks[child.identifier])
 
-            self.script = session.create_script(hook_source, runtime='v8' if self.args.enable_jit else 'duk')
+            self.script = session.create_script(hook_source, runtime='v8' if self.args.enable_jit else 'default')
             self.script.on('message', self.on_message)
             self.script.load()
 
@@ -463,7 +463,7 @@ class BadadaShell(cmd.Cmd):
 
     def load_script(self, file_name):
         hook_source = self.get_file_contents(file_name)
-        self.script = self.session.create_script(hook_source, runtime='v8' if self.args.enable_jit else 'duk')
+        self.script = self.session.create_script(hook_source, runtime='v8' if self.args.enable_jit else 'default')
         self.script.on('message', self.on_message)
         self.script.load()
 
