@@ -32,6 +32,17 @@ class FridaProcess:
 
     @staticmethod
     def run(use_su):
+        # Modern Android versions has USAP enabled by default, frida doesn't support this feature yet.
+        # Reference: https://github.com/frida/frida/issues/1613
+        cmd_check_usap = 'adb shell getprop persist.device_config.runtime_native.usap_pool_enabled'
+        cmd_disable_usap = 'adb shell setprop persist.device_config.runtime_native.usap_pool_enabled false'
+
+        if subprocess.check_output([cmd_check_usap], shell=True).strip() == b'true':
+            print('[*] Disabling Android USAP feature...')
+            subprocess.Popen(cmd_disable_usap, stdin=subprocess.PIPE, shell=True)
+
+            time.sleep(1)
+
         cmd_check_frida = f'adb shell {"su -c" if use_su else ""} "ps; ps -ef" | sort | uniq | grep frida-server | wc -l'
         cmd_start_frida_daemon = f'adb shell {"su -c" if use_su else ""} "/data/local/tmp/frida-server -D"'
 
