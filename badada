@@ -31,9 +31,9 @@ class FridaProcess:
         pass
 
     @staticmethod
-    def run():
-        cmd_check_frida = 'adb shell "ps; ps -ef" | sort | uniq | grep frida-server | wc -l'
-        cmd_start_frida_daemon = 'adb shell "/data/local/tmp/frida-server -D"'
+    def run(use_su):
+        cmd_check_frida = f'adb shell {"su -c" if use_su else ""} "ps; ps -ef" | sort | uniq | grep frida-server | wc -l'
+        cmd_start_frida_daemon = f'adb shell {"su -c" if use_su else ""} "/data/local/tmp/frida-server -D"'
 
         if subprocess.check_output([cmd_check_frida], shell=True).strip() == b'0':
             print('[*] Starting Frida server...')
@@ -42,8 +42,8 @@ class FridaProcess:
             time.sleep(2)
 
     @staticmethod
-    def terminate():
-        cmd_kill_frida = 'adb shell "killall -s QUIT frida-server"'
+    def terminate(use_su):
+        cmd_kill_frida = f'adb shell {"su -c" if use_su else ""} "killall -s QUIT frida-server"'
         print('[*] Terminating frida-server...')
         subprocess.Popen(cmd_kill_frida, stdin=subprocess.PIPE, shell=True)
 
@@ -115,6 +115,9 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('--enable-jit', action='store_true', help='Uses V8 as the Javascript Runtime '
                                                                       'instead of Duktape')
 
+        parser.add_argument('-r', '--use-su', action='store_true', help='Allows rooted production builds devices to'
+                                                                        'escalate root privileges by calling `su -c`')
+
         parser.add_argument('--avoid-grandchildren-gating', action='store_true', help='Avoid enabling child-gating for '
                                                                                       'grandchildren')
 
@@ -152,17 +155,17 @@ class BadadaShell(cmd.Cmd):
 
         if self.args.processToHook != 'Gadget':
             print('[*] Checking if frida-server is located at tmp dir...')
-            if subprocess.check_output(['adb shell "[ -f /data/local/tmp/frida-server ]; echo \\$?"'],
+            if subprocess.check_output([f'adb shell {"su -c" if self.args.use_su else ""} "[ -f /data/local/tmp/frida-server ]; echo \\$?"'],
                                        shell=True).strip() != b'0':
 
                 print('[-] frida-server does not exist in /data/local/tmp/frida-server')
                 return
 
             print('[*] Checking if adb is running as root...')
-            if subprocess.check_output(['adb shell id -u'],
+            if subprocess.check_output([f'adb shell {"su -c" if self.args.use_su else ""} "id -u"'],
                                        shell=True).strip() != b'0':
 
-                print('[-] adb is not running as root')
+                print('[-] adb is not running as root. If you have a rooted device, try running badada with `--use-su`')
                 return
 
             if not self.args.ignore_selinux_check:
@@ -172,7 +175,7 @@ class BadadaShell(cmd.Cmd):
                 selinux_tools_present = True
 
                 try:
-                    output = subprocess.check_output(['adb shell getenforce'], shell=True,
+                    output = subprocess.check_output([f'adb shell {"su -c" if self.args.use_su else ""} getenforce'], shell=True,
                                                      stderr=subprocess.STDOUT).strip()
 
                     if output.lower() == b'enforcing':
@@ -201,10 +204,10 @@ class BadadaShell(cmd.Cmd):
                         success = False
 
                         try:
-                            subprocess.check_output(['adb shell setenforce 0'], shell=True,
+                            subprocess.check_output([f'adb shell {"su -c" if self.args.use_su else ""} "setenforce 0"'], shell=True,
                                                     stderr=subprocess.STDOUT)
 
-                            output = subprocess.check_output(['adb shell getenforce'], shell=True,
+                            output = subprocess.check_output([f'adb shell {"su -c" if self.args.use_su else ""} getenforce'], shell=True,
                                                              stderr=subprocess.STDOUT).strip()
 
                             if output.lower() == b'permissive':
@@ -225,8 +228,8 @@ class BadadaShell(cmd.Cmd):
                             return
 
             self.frida_server = FridaProcess()
-            self.frida_server.run()
-        
+            self.frida_server.run(self.args.use_su)
+
         print('[*] Attaching USB Device')
 
         try:
