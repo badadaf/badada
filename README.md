@@ -96,6 +96,24 @@ If you ran any of the below commands but regretted of it and want to abort, just
     classes keystore
     ```
 
+- **Introspect class attributes**
+
+    ```
+    classes android.database.sqlite.SQLiteQuery introspect
+    ```
+
+- **List all classes in APK (including the non-loaded)**
+
+    ```
+    classesinapkfile
+    ```
+
+- **List all classes in APK (including the non-loaded) with filter**
+
+    ```
+    classesinapkfile keystore
+    ```
+
 - **Introspect a loaded class (show its attribute values)**
 
     ```
