@@ -90,6 +90,7 @@ rpc.exports = {
 
                                             try {
                                                 value = f.get(null)
+                                                value = value.toString();
                                             } catch(err) {
                                             }
 
@@ -164,6 +165,7 @@ rpc.exports = {
 
                                             try {
                                                 value = f.get(null)
+                                                value = value.toString();
                                             } catch(err) {
                                             }
 
