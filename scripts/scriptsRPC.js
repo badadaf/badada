@@ -47,34 +47,43 @@ function getAnyClassFactoryFor(className) {
 }
 
 rpc.exports = {
-    // search all classes in current APK file that containsThis
-    searchclassinapkfile: function(containsThis){
-        Java.perform(function(){
-            try {
-                var activityThread = Java.use('android.app.ActivityThread');
-                var currentApplication = activityThread.currentApplication();
-                var context = currentApplication.getApplicationContext();
-                var appInfo = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0);
-                var apkFilePath = appInfo.publicSourceDir.value;
-                var classFile = Java.openClassFile(apkFilePath);
-                var classNames = classFile.getClassNames();
-
-                for(var i = 0; i < classNames.length; i++) {
-                    if (classNames[i].toString().toLowerCase().search(containsThis.toLowerCase()) != -1) {
-                        var message = classNames[i].toString();
-                        send(message);
-                    }
-                }
-            } catch(err){
-                send('Error: ' + err);
-            }
-        });
-    },
-
-    // getClasses that containsThis
+    // getClasses that containsThis - it searchs in all APK classes and in all loaded classes
     getclasses: function(containsThis, shouldIntrospect) {
+        var alreadySent = [];
+
+        if(shouldIntrospect){
+            send('Only loaded classes can be introspecting. Skipping classes in APK file.')
+        }
+        else{
+            Java.perform(function(){
+                send('[*] Enumerating all classes in APK file...')
+                try {
+                    var activityThread = Java.use('android.app.ActivityThread');
+                    var currentApplication = activityThread.currentApplication();
+                    var context = currentApplication.getApplicationContext();
+                    var appInfo = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0);
+                    var apkFilePath = appInfo.publicSourceDir.value;
+                    var classFile = Java.openClassFile(apkFilePath);
+                    var classNames = classFile.getClassNames();
+
+                    for(var i = 0; i < classNames.length; i++) {
+                        if (classNames[i].toString().toLowerCase().search(containsThis.toLowerCase()) != -1) {
+                            var message = classNames[i].toString();
+                            
+                            if(!alreadySent.includes(message)){
+                                send(message);
+                                alreadySent.push(message);
+                            }
+                        }
+                    }
+                } catch(err){
+                    send('Error: ' + err);
+                }
+            });
+        }
+
         Java.perform(function() {
-            send("[*] Enumerating classes...");
+            send("\n\n[*] Enumerating remaining loaded classes...");
             var shouldStopFlag = false;
             var auxCount = 0;
 
@@ -136,7 +145,10 @@ rpc.exports = {
                             }
                         }
 
-                        send(message)
+                        if(!alreadySent.includes(message)){
+                            send(message);
+                            alreadySent.push(message);
+                        }
                     }
                 },
                 onComplete: function (){
