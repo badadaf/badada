@@ -705,7 +705,7 @@ class BadadaShell(cmd.Cmd):
 
     @staticmethod
     def help_classesinapkfile():
-        print('Search all classes in the current APK file filtered by [<contains_this>]')
+        print('Search all classes (including the non-loaded classes) in the current APK file filtered by [<contains_this>]')
         print('Use this functionality if "classes" command fails')
 
     def do_classesinapkfile(self, in_args):
