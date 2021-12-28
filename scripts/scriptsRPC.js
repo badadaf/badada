@@ -47,6 +47,30 @@ function getAnyClassFactoryFor(className) {
 }
 
 rpc.exports = {
+    // search all classes in current APK file that containsThis
+    searchclassinapkfile: function(containsThis){
+        Java.perform(function(){
+            try {
+                var activityThread = Java.use('android.app.ActivityThread');
+                var currentApplication = activityThread.currentApplication();
+                var context = currentApplication.getApplicationContext();
+                var appInfo = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0);
+                var apkFilePath = appInfo.publicSourceDir.value;
+                var classFile = Java.openClassFile(apkFilePath);
+                var classNames = classFile.getClassNames();
+
+                for(var i = 0; i < classNames.length; i++) {
+                    if (classNames[i].toString().toLowerCase().search(containsThis.toLowerCase()) != -1) {
+                        var message = classNames[i].toString();
+                        send(message);
+                    }
+                }
+            } catch(err){
+                send('Error: ' + err);
+            }
+        });
+    },
+
     // getClasses that containsThis
     getclasses: function(containsThis, shouldIntrospect) {
         Java.perform(function() {
