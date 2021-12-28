@@ -51,36 +51,70 @@ rpc.exports = {
     getclasses: function(containsThis, shouldIntrospect) {
         var alreadySent = [];
 
-        if(shouldIntrospect){
-            send('Only loaded classes can be introspecting. Skipping classes in APK file.')
-        }
-        else{
-            Java.perform(function(){
-                send('[*] Enumerating all classes in APK file...')
-                try {
-                    var activityThread = Java.use('android.app.ActivityThread');
-                    var currentApplication = activityThread.currentApplication();
-                    var context = currentApplication.getApplicationContext();
-                    var appInfo = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0);
-                    var apkFilePath = appInfo.publicSourceDir.value;
-                    var classFile = Java.openClassFile(apkFilePath);
-                    var classNames = classFile.getClassNames();
+        Java.perform(function(){
+            send('[*] Enumerating all classes in APK file...')
+            try {
+                var activityThread = Java.use('android.app.ActivityThread');
+                var currentApplication = activityThread.currentApplication();
+                var context = currentApplication.getApplicationContext();
+                var appInfo = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0);
+                var apkFilePath = appInfo.publicSourceDir.value;
+                var classFile = Java.openClassFile(apkFilePath);
+                var classNames = classFile.getClassNames();
 
-                    for(var i = 0; i < classNames.length; i++) {
-                        if (classNames[i].toString().toLowerCase().search(containsThis.toLowerCase()) != -1) {
-                            var message = classNames[i].toString();
-                            
-                            if(!alreadySent.includes(message)){
-                                send(message);
-                                alreadySent.push(message);
+                for(var i = 0; i < classNames.length; i++) {
+                    if (classNames[i].toString().toLowerCase().search(containsThis.toLowerCase()) != -1) {
+                        var message = classNames[i].toString();
+
+                        if(shouldIntrospect) {
+                            try{
+                                var Clazz = getClassFromAnyClassLoader(classNames[i].toString());
+
+                                if(Clazz != null) {
+                                    var fields = Clazz.class.getDeclaredFields();
+
+                                    if(fields != null) {
+                                        message += " -> [introspect]:\n";
+
+                                        for(var j = 0; j < fields.length; j++){
+                                            var f = fields[j];
+
+                                            if(f == null) {
+                                                continue;
+                                            }
+
+                                            var accessible = f.isAccessible();
+                                            f.setAccessible(true);
+
+                                            var value = null;
+
+                                            try {
+                                                value = f.get(null)
+                                            } catch(err) {
+                                            }
+
+                                            message += "\t" + f.getName() + ': ' + JSON.stringify(value) + "\n";
+
+                                            f.setAccessible(accessible);
+                                        }
+                                    }
+                                }
+
+                            } catch(err) {
+                                message += "error while introspecting: " + err;
                             }
                         }
+                        
+                        if(!alreadySent.includes(message)){
+                            send(message);
+                            alreadySent.push(message);
+                        }
                     }
-                } catch(err){
-                    send('Error: ' + err);
                 }
-            });
-        }
+            } catch(err){
+                send('Error: ' + err);
+            }
+        });
 
         Java.perform(function() {
             send("\n\n[*] Enumerating remaining loaded classes...");
