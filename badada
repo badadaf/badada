@@ -728,20 +728,41 @@ class BadadaShell(cmd.Cmd):
 
     def do_generatehooks(self, in_args):
         args = in_args.strip().split(" ")
+        file_path = None
         if len(args) < 1:
-            print('\n[-] Usage: generatehooks <className> [methodNameFilter]\n')
+            print('\n[-] Usage: generatehooks <className> [methodNameFilter] [-o saveToFilePath]\n')
             return
 
         elif len(args) == 1:
-            second_arg = ''
+            m_class_name = args[0]
+            m_method_name = ''
 
+        elif len(args) == 2:
+            m_class_name = args[0]
+            m_method_name = args[1]
+        elif len(args) == 3 and args[1] == "-o":
+            m_class_name = args[0]
+            m_method_name = ''
+            file_path = args[2]
         else:
-            second_arg = args[1]
+            m_class_name = args[0]
+            m_method_name = args[1]
+            file_path = args[3]
 
         try:
-            self.default_rpc_methods.exports.generatehooks(args[0], second_arg)
+            finalScript = self.default_rpc_methods.exports.generatehooks(m_class_name, m_method_name)
         except KeyboardInterrupt:
             self.abort_default_rpc_execution()
+
+        print(f"This is the result: {finalScript}")
+        if file_path:
+
+            try:
+                with open(file_path, 'w') as file:
+                    file.write(finalScript)
+            except Exception as e:
+                print(f"Error saving file: {e}")
+
 
     @staticmethod
     def help_searchmethod():

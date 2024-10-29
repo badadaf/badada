@@ -408,295 +408,306 @@ rpc.exports = {
     },
 
     generatehooks: function(classFullPathName, methodNameFilter){
-        Java.perform(function(){
-            var shouldStopFlag = false;
-            var auxCount = 0;
+        const returnValue = "test";
+        return new Promise((resolve, reject) => {
+            Java.perform(function(){
+                try {
+                    var shouldStopFlag = false;
+                    var auxCount = 0;
 
-            try{
-                var Clazz = getClassFromAnyClassLoader(classFullPathName);
-            } catch(err){
-                send('ERROR: Class not found: ' + classFullPathName);
-                return;
-            }
-
-            var classFullPathNameSplitted = classFullPathName.split('.');
-            var className = classFullPathNameSplitted[classFullPathNameSplitted.length - 1];
-            var classNiceName = className.replace(new RegExp('\\$', 'g'), '_').replace('-', '_');
-
-            var scriptString = 'Java.perform(function(){\n';
-            scriptString += '\tfunction getClassFromAnyClassLoader(className) {\n\t\tvar clazz = null;\n\n\t\ttry {\n';
-            scriptString += '\t\t\tclazz = Java.use(className);\n\t\t\treturn clazz;\n\t\t}\n\t\tcatch(error) {\n\t\t\tvar classLoaders = Java.enumerateClassLoadersSync();\n';
-            scriptString += '\t\t\tfor(var i = 0; i < classLoaders.length; i++) {\n\t\t\t\ttry {\n\t\t\t\t\tvar classFactory = Java.ClassFactory.get(classLoaders[i]);\n';
-            scriptString += '\t\t\t\t\tclazz = classFactory.use(className);\n\t\t\t\t\treturn clazz;\n\t\t\t\t}\n\t\t\t\tcatch(error) {}\n\t\t\t}\n\t\t}\n';
-            scriptString += '\t\tthrow new Error("Could not find the class " + className + " in any class loader");\n\t}\n\n';
-
-            scriptString += '\tvar ' + classNiceName + ' = getClassFromAnyClassLoader("' + classFullPathName + '");\n\n';
-
-            var ClazzConstructors = Clazz.class.getDeclaredConstructors();
-            var methodNameCount = {};
-
-            for(var i = 0; i < ClazzConstructors.length; i++){
-                auxCount += 1;
-                if(shouldStopFlag == false && auxCount % 10 == 0) {
-                    send('shouldStopSyncMsg');
-                    var op = recv('shouldStopSyncMsg', function(value) {
-                        shouldStopFlag = value.payload;
-                    });
-
-                    op.wait();
-                }
-
-                if(shouldStopFlag) {
-                    send('stoppedSyncMsg');
-                    shouldStopFlag = false;
-                    return;
-                }
-
-                var constructorFullSignature = ClazzConstructors[i].toGenericString();
-
-                var lastMarkIndex = -1;
-                for(var j = 0; constructorFullSignature[j] != '('; j++){
-                    if(constructorFullSignature[j] == ' ' || constructorFullSignature[j] == '.'){
-                        lastMarkIndex = j;
-                    }
-                }
-
-                var constructorName = constructorFullSignature.slice(lastMarkIndex+1, j);
-
-                if(methodNameFilter !== "" && "init".indexOf(methodNameFilter.toLowerCase()) === -1){
-                    continue;
-                }
-
-                if(!(constructorName in methodNameCount)){
-                    methodNameCount[constructorName] = 1;
-
-                    var overloads = [];
-
-                    try {
-                        overloads = Clazz["$init"].overloads;
-                    }
-                    catch(err) {
-                        send('[!] Failed to hook ' + classNiceName + "['$init']");
+                    try{
+                        var Clazz = getClassFromAnyClassLoader(classFullPathName);
+                    } catch(err){
+                        send('ERROR: Class not found: ' + classFullPathName);
+                        return;
                     }
 
-                    overloads.forEach(function(overload){
-                        var argTypes = overload.argumentTypes;
+                    var classFullPathNameSplitted = classFullPathName.split('.');
+                    var className = classFullPathNameSplitted[classFullPathNameSplitted.length - 1];
+                    var classNiceName = className.replace(new RegExp('\\$', 'g'), '_').replace('-', '_');
 
-                        scriptString += "\t//Constructor Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
-                        scriptString += '\t' + classNiceName + "['$init']";
+                    var scriptString = 'Java.perform(function(){\n';
+                    scriptString += '\tfunction getClassFromAnyClassLoader(className) {\n\t\tvar clazz = null;\n\n\t\ttry {\n';
+                    scriptString += '\t\t\tclazz = Java.use(className);\n\t\t\treturn clazz;\n\t\t}\n\t\tcatch(error) {\n\t\t\tvar classLoaders = Java.enumerateClassLoadersSync();\n';
+                    scriptString += '\t\t\tfor(var i = 0; i < classLoaders.length; i++) {\n\t\t\t\ttry {\n\t\t\t\t\tvar classFactory = Java.ClassFactory.get(classLoaders[i]);\n';
+                    scriptString += '\t\t\t\t\tclazz = classFactory.use(className);\n\t\t\t\t\treturn clazz;\n\t\t\t\t}\n\t\t\t\tcatch(error) {}\n\t\t\t}\n\t\t}\n';
+                    scriptString += '\t\tthrow new Error("Could not find the class " + className + " in any class loader");\n\t}\n\n';
 
-                        if(overloads.length > 1){
-                            scriptString += '.overload(';
+                    scriptString += '\tvar ' + classNiceName + ' = getClassFromAnyClassLoader("' + classFullPathName + '");\n\n';
 
-                            for(var j = 0; j < argTypes.length; j++){
-                                if(j == argTypes.length - 1){
-                                    scriptString += "'" + argTypes[j].className + "'";
+                    var ClazzConstructors = Clazz.class.getDeclaredConstructors();
+                    var methodNameCount = {};
+
+                    for(var i = 0; i < ClazzConstructors.length; i++){
+                        auxCount += 1;
+                        if(shouldStopFlag == false && auxCount % 10 == 0) {
+                            send('shouldStopSyncMsg');
+                            var op = recv('shouldStopSyncMsg', function(value) {
+                                shouldStopFlag = value.payload;
+                            });
+
+                            op.wait();
+                        }
+
+                        if(shouldStopFlag) {
+                            send('stoppedSyncMsg');
+                            shouldStopFlag = false;
+                            return;
+                        }
+
+                        var constructorFullSignature = ClazzConstructors[i].toGenericString();
+
+                        var lastMarkIndex = -1;
+                        for(var j = 0; constructorFullSignature[j] != '('; j++){
+                            if(constructorFullSignature[j] == ' ' || constructorFullSignature[j] == '.'){
+                                lastMarkIndex = j;
+                            }
+                        }
+
+                        var constructorName = constructorFullSignature.slice(lastMarkIndex+1, j);
+
+                        if(methodNameFilter !== "" && "init".indexOf(methodNameFilter.toLowerCase()) === -1){
+                            continue;
+                        }
+
+                        if(!(constructorName in methodNameCount)){
+                            methodNameCount[constructorName] = 1;
+
+                            var overloads = [];
+
+                            try {
+                                overloads = Clazz["$init"].overloads;
+                            }
+                            catch(err) {
+                                send('[!] Failed to hook ' + classNiceName + "['$init']");
+                            }
+
+                            overloads.forEach(function(overload){
+                                var argTypes = overload.argumentTypes;
+
+                                scriptString += "\t//Constructor Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
+                                scriptString += '\t' + classNiceName + "['$init']";
+
+                                if(overloads.length > 1){
+                                    scriptString += '.overload(';
+
+                                    for(var j = 0; j < argTypes.length; j++){
+                                        if(j == argTypes.length - 1){
+                                            scriptString += "'" + argTypes[j].className + "'";
+                                        }
+                                        else{
+                                            scriptString += "'" + argTypes[j].className + "', ";
+                                        }
+                                    }
+
+                                    scriptString += ')';
+                                }
+
+                                scriptString += '.implementation = function(';
+
+                                for(var j = 0; j < argTypes.length; j++){
+                                    if(j == argTypes.length - 1){
+                                        scriptString += 'p' + (j+1).toString();
+                                    }
+                                    else{
+                                        scriptString += 'p' + (j+1).toString() + ', ';
+                                    }
+                                }
+
+                                scriptString += '){\n';
+
+                                if(argTypes.length > 0){
+                                    scriptString += '\t\tsend("';
+
+                                    scriptString += classNiceName + "." + '$init params: " + ';
+
+                                    for(var j = 0; j < argTypes.length; j++){
+                                        if(j == argTypes.length - 1){
+                                            scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString();
+                                        }
+                                        else{
+                                            scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString() + ' + ", " + ';
+                                        }
+                                    }
+
+                                    scriptString += ');\n\n';
                                 }
                                 else{
-                                    scriptString += "'" + argTypes[j].className + "', ";
+                                    scriptString += '\t\tsend("';
+                                    scriptString += classNiceName + "." + '$init called. There are no params.");\n\n';
                                 }
-                            }
 
-                            scriptString += ')';
-                        }
+                                scriptString += "\t\tvar originalResult = this['" + "$init']" + '(';
 
-                        scriptString += '.implementation = function(';
-
-                        for(var j = 0; j < argTypes.length; j++){
-                            if(j == argTypes.length - 1){
-                                scriptString += 'p' + (j+1).toString();
-                            }
-                            else{
-                                scriptString += 'p' + (j+1).toString() + ', ';
-                            }
-                        }
-
-                        scriptString += '){\n';
-
-                        if(argTypes.length > 0){
-                            scriptString += '\t\tsend("';
-
-                            scriptString += classNiceName + "." + '$init params: " + ';
-
-                            for(var j = 0; j < argTypes.length; j++){
-                                if(j == argTypes.length - 1){
-                                    scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString();
+                                for(var j = 0; j < argTypes.length; j++){
+                                    if(j == argTypes.length - 1){
+                                        scriptString += 'p' + (j+1).toString();
+                                    }
+                                    else{
+                                        scriptString += 'p' + (j+1).toString() + ', ';
+                                    }
                                 }
-                                else{
-                                    scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString() + ' + ", " + ';
-                                }
-                            }
 
-                            scriptString += ');\n\n';
+                                scriptString += ');\n\n';
+
+                                scriptString += '\t\treturn originalResult;\n';
+                                scriptString += '\t};\n\n';
+                            });
                         }
-                        else{
-                            scriptString += '\t\tsend("';
-                            scriptString += classNiceName + "." + '$init called. There are no params.");\n\n';
-                        }
-
-                        scriptString += "\t\tvar originalResult = this['" + "$init']" + '(';
-
-                        for(var j = 0; j < argTypes.length; j++){
-                            if(j == argTypes.length - 1){
-                                scriptString += 'p' + (j+1).toString();
-                            }
-                            else{
-                                scriptString += 'p' + (j+1).toString() + ', ';
-                            }
-                        }
-
-                        scriptString += ');\n\n';
-
-                        scriptString += '\t\treturn originalResult;\n';
-                        scriptString += '\t};\n\n';
-                    });
-                }
-            }
-
-            var ClazzMethods = Clazz.class.getDeclaredMethods();
-            methodNameCount = {};
-
-            auxCount = 0;
-            for(var i = 0; i < ClazzMethods.length; i++){
-                auxCount += 1;
-                if(shouldStopFlag == false && auxCount % 10 == 0) {
-                    send('shouldStopSyncMsg');
-                    var op = recv('shouldStopSyncMsg', function(value) {
-                        shouldStopFlag = value.payload;
-                    });
-
-                    op.wait();
-                }
-
-                if(shouldStopFlag) {
-                    send('stoppedSyncMsg');
-                    shouldStopFlag = false;
-                    return;
-                }
-
-                var methodFullSignature = ClazzMethods[i].toGenericString();
-
-                var lastMarkIndex = -1;
-                for(var j = 0; methodFullSignature[j] != '('; j++){
-                    if(methodFullSignature[j] == ' ' || methodFullSignature[j] == '.'){
-                        lastMarkIndex = j;
-                    }
-                }
-
-                var methodName = methodFullSignature.slice(lastMarkIndex+1, j);
-
-                if(methodNameFilter !== "" && methodName.toLowerCase().indexOf(methodNameFilter.toLowerCase()) === -1){
-                    continue;
-                }
-
-                if(!(methodName in methodNameCount)){
-                    methodNameCount[methodName] = 1;
-
-                    var overloads = [];
-
-                    try {
-                        overloads = Clazz[methodName].overloads;
-                    }
-                    catch(err) {
-                        send('[!] Failed to hook ' + classNiceName + "['" + methodName + "']");
                     }
 
-                    overloads.forEach(function(overload){
-                        var argTypes = overload.argumentTypes;
+                    var ClazzMethods = Clazz.class.getDeclaredMethods();
+                    methodNameCount = {};
 
-                        scriptString += "\t//Method Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
-                        scriptString += '\t' + classNiceName + "['" + methodName + "']";
+                    auxCount = 0;
+                    for(var i = 0; i < ClazzMethods.length; i++){
+                        auxCount += 1;
+                        if(shouldStopFlag == false && auxCount % 10 == 0) {
+                            send('shouldStopSyncMsg');
+                            var op = recv('shouldStopSyncMsg', function(value) {
+                                shouldStopFlag = value.payload;
+                            });
 
-                        if(overloads.length > 1){
-                            scriptString += '.overload(';
+                            op.wait();
+                        }
 
-                            for(var j = 0; j < argTypes.length; j++){
-                                if(j == argTypes.length - 1){
-                                    scriptString += "'" + argTypes[j].className + "'";
+                        if(shouldStopFlag) {
+                            send('stoppedSyncMsg');
+                            shouldStopFlag = false;
+                            return;
+                        }
 
+                        var methodFullSignature = ClazzMethods[i].toGenericString();
+
+                        var lastMarkIndex = -1;
+                        for(var j = 0; methodFullSignature[j] != '('; j++){
+                            if(methodFullSignature[j] == ' ' || methodFullSignature[j] == '.'){
+                                lastMarkIndex = j;
+                            }
+                        }
+
+                        var methodName = methodFullSignature.slice(lastMarkIndex+1, j);
+
+                        if(methodNameFilter !== "" && methodName.toLowerCase().indexOf(methodNameFilter.toLowerCase()) === -1){
+                            continue;
+                        }
+
+                        if(!(methodName in methodNameCount)){
+                            methodNameCount[methodName] = 1;
+
+                            var overloads = [];
+
+                            try {
+                                overloads = Clazz[methodName].overloads;
+                            }
+                            catch(err) {
+                                send('[!] Failed to hook ' + classNiceName + "['" + methodName + "']");
+                            }
+
+                            overloads.forEach(function(overload){
+                                var argTypes = overload.argumentTypes;
+
+                                scriptString += "\t//Method Signature => " + overload.returnType.className + " " + overload.methodName + "(" + overload.argumentTypes.map(function(type){ return type.className }).join(", ") + ")\n";
+                                scriptString += '\t' + classNiceName + "['" + methodName + "']";
+
+                                if(overloads.length > 1){
+                                    scriptString += '.overload(';
+
+                                    for(var j = 0; j < argTypes.length; j++){
+                                        if(j == argTypes.length - 1){
+                                            scriptString += "'" + argTypes[j].className + "'";
+
+                                        }
+                                        else{
+                                            scriptString += "'" + argTypes[j].className + "', ";
+                                        }
+                                    }
+
+                                    scriptString += ')';
+                                }
+
+                                scriptString += '.implementation = function(';
+
+                                for(var j = 0; j < argTypes.length; j++){
+                                    if(j == argTypes.length - 1){
+                                        scriptString += 'p' + (j+1).toString();
+                                    }
+                                    else{
+                                        scriptString += 'p' + (j+1).toString() + ', ';
+                                    }
+                                }
+
+                                scriptString += '){\n';
+
+                                if(argTypes.length > 0) {
+                                    scriptString += '\t\tsend("';
+
+                                    scriptString += classNiceName + "." + methodName + ' params: " + ';
+
+                                    for(var j = 0; j < argTypes.length; j++){
+                                        if(j == argTypes.length - 1){
+                                            scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString();
+                                        }
+                                        else{
+                                            scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString() + ' + ", " + ';
+                                        }
+                                    }
+
+                                    scriptString += ');\n\n';
                                 }
                                 else{
-                                    scriptString += "'" + argTypes[j].className + "', ";
+                                    scriptString += '\t\tsend("';
+                                    scriptString += classNiceName + "." + methodName + ' called. There are no params.");\n\n';
                                 }
-                            }
 
-                            scriptString += ')';
-                        }
+                                scriptString += "\t\tvar originalResult = this['" + methodName + "'](";
 
-                        scriptString += '.implementation = function(';
-
-                        for(var j = 0; j < argTypes.length; j++){
-                            if(j == argTypes.length - 1){
-                                scriptString += 'p' + (j+1).toString();
-                            }
-                            else{
-                                scriptString += 'p' + (j+1).toString() + ', ';
-                            }
-                        }
-
-                        scriptString += '){\n';
-
-                        if(argTypes.length > 0) {
-                            scriptString += '\t\tsend("';
-
-                            scriptString += classNiceName + "." + methodName + ' params: " + ';
-
-                            for(var j = 0; j < argTypes.length; j++){
-                                if(j == argTypes.length - 1){
-                                    scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString();
+                                for(var j = 0; j < argTypes.length; j++){
+                                    if(j == argTypes.length - 1){
+                                        scriptString += 'p' + (j+1).toString();
+                                    }
+                                    else{
+                                        scriptString += 'p' + (j+1).toString() + ', ';
+                                    }
                                 }
-                                else{
-                                    scriptString += '"p' + (j+1).toString() + '=" + p' + (j+1).toString() + ' + ", " + ';
-                                }
-                            }
 
-                            scriptString += ');\n\n';
+                                scriptString += ');\n\n';
+
+
+                                scriptString += '\t\treturn originalResult;\n';
+                                scriptString += '\t};\n\n';
+                            });
                         }
-                        else{
-                            scriptString += '\t\tsend("';
-                            scriptString += classNiceName + "." + methodName + ' called. There are no params.");\n\n';
-                        }
+                    }
+                    scriptString += '\n});'
 
-                        scriptString += "\t\tvar originalResult = this['" + methodName + "'](";
+                    var finalScriptString = scriptString.replace(new RegExp('\t', 'g'), '    ');
 
-                        for(var j = 0; j < argTypes.length; j++){
-                            if(j == argTypes.length - 1){
-                                scriptString += 'p' + (j+1).toString();
-                            }
-                            else{
-                                scriptString += 'p' + (j+1).toString() + ', ';
-                            }
-                        }
+                    if(shouldStopFlag == false) {
+                        send('shouldStopSyncMsg');
+                        var op = recv('shouldStopSyncMsg', function(value) {
+                            shouldStopFlag = value.payload;
+                        });
 
-                        scriptString += ');\n\n';
+                        op.wait();
+                    }
 
+                    if(shouldStopFlag) {
+                        send('stoppedSyncMsg');
+                        shouldStopFlag = false;
+                        return;
+                    }
 
-                        scriptString += '\t\treturn originalResult;\n';
-                        scriptString += '\t};\n\n';
-                    });
+                    send(finalScriptString);
+
+                    resolve(finalScriptString)
+                } catch (error) {
+                    console.error("Error in generatehooks:", error);
+                    reject(error);
                 }
-            }
-            scriptString += '\n});'
 
-            var finalScriptString = scriptString.replace(new RegExp('\t', 'g'), '    ');
 
-            if(shouldStopFlag == false) {
-                send('shouldStopSyncMsg');
-                var op = recv('shouldStopSyncMsg', function(value) {
-                    shouldStopFlag = value.payload;
-                });
-
-                op.wait();
-            }
-
-            if(shouldStopFlag) {
-                send('stoppedSyncMsg');
-                shouldStopFlag = false;
-                return;
-            }
-
-            send(finalScriptString);
+            });
         });
     }
 };
-
