@@ -37,16 +37,16 @@ class FridaProcess:
         cmd_check_usap = 'adb shell getprop persist.device_config.runtime_native.usap_pool_enabled'
         cmd_disable_usap = 'adb shell setprop persist.device_config.runtime_native.usap_pool_enabled false'
 
-        if subprocess.check_output([cmd_check_usap], shell=True).strip() == b'true':
+        if subprocess.check_output(cmd_check_usap, shell=True).strip() == b'true':
             print('[*] Disabling Android USAP feature...')
             subprocess.Popen(cmd_disable_usap, stdin=subprocess.PIPE, shell=True)
 
             time.sleep(1)
 
-        cmd_check_frida = f'adb shell {"su -c" if use_su else ""} "ps; ps -ef" | sort | uniq | grep frida-server | wc -l'
+        cmd_check_frida = f'adb shell {"su -c" if use_su else ""} "ps; ps -ef | sort | uniq | grep frida-server | wc -l"'
         cmd_start_frida_daemon = f'adb shell {"su -c" if use_su else ""} "/data/local/tmp/frida-server -D"'
 
-        if subprocess.check_output([cmd_check_frida], shell=True).strip() == b'0':
+        if subprocess.check_output(cmd_check_frida, shell=True).strip() == b'0':
             print('[*] Starting Frida server...')
             subprocess.Popen(cmd_start_frida_daemon, stdin=subprocess.PIPE, shell=True)
 
@@ -151,7 +151,7 @@ class BadadaShell(cmd.Cmd):
         print('[*] Waiting until the device is connected to the USB port...')
 
         try:
-            subprocess.check_output(['adb wait-for-device'], shell=True, timeout=300)
+            subprocess.check_output('adb wait-for-device', shell=True, timeout=300)
             print('[*] Device connected')
 
         except subprocess.TimeoutExpired as error:
@@ -166,14 +166,14 @@ class BadadaShell(cmd.Cmd):
 
         if self.args.processToHook != 'Gadget':
             print('[*] Checking if frida-server is located at tmp dir...')
-            if subprocess.check_output([f'adb shell {"su -c" if self.args.use_su else ""} "[ -f /data/local/tmp/frida-server ]; echo \\$?"'],
+            if subprocess.check_output(f'adb shell {"su -c" if self.args.use_su else ""} "[ -f /data/local/tmp/frida-server ]; echo \\$?"',
                                        shell=True).strip() != b'0':
 
                 print('[-] frida-server does not exist in /data/local/tmp/frida-server')
                 return
 
             print('[*] Checking if adb is running as root...')
-            if subprocess.check_output([f'adb shell {"su -c" if self.args.use_su else ""} "id -u"'],
+            if subprocess.check_output(f'adb shell {"su -c" if self.args.use_su else ""} "id -u"',
                                        shell=True).strip() != b'0':
 
                 print('[-] adb is not running as root. If you have a rooted device, try running badada with `--use-su`')
@@ -186,7 +186,7 @@ class BadadaShell(cmd.Cmd):
                 selinux_tools_present = True
 
                 try:
-                    output = subprocess.check_output([f'adb shell {"su -c" if self.args.use_su else ""} getenforce'], shell=True,
+                    output = subprocess.check_output(f'adb shell {"su -c" if self.args.use_su else ""} getenforce', shell=True,
                                                      stderr=subprocess.STDOUT).strip()
 
                     if output.lower() == b'enforcing':
@@ -215,10 +215,10 @@ class BadadaShell(cmd.Cmd):
                         success = False
 
                         try:
-                            subprocess.check_output([f'adb shell {"su -c" if self.args.use_su else ""} "setenforce 0"'], shell=True,
+                            subprocess.check_output(f'adb shell {"su -c" if self.args.use_su else ""} "setenforce 0"', shell=True,
                                                     stderr=subprocess.STDOUT)
 
-                            output = subprocess.check_output([f'adb shell {"su -c" if self.args.use_su else ""} getenforce'], shell=True,
+                            output = subprocess.check_output(f'adb shell {"su -c" if self.args.use_su else ""} getenforce', shell=True,
                                                              stderr=subprocess.STDOUT).strip()
 
                             if output.lower() == b'permissive':
