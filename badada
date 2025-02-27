@@ -167,7 +167,7 @@ class BadadaShell(cmd.Cmd):
 
         if self.args.processToHook != 'Gadget':
             print('[*] Checking if frida-server is located at tmp dir...')
-            if subprocess.check_output(f'adb shell {"su -c" if self.args.use_su else ""} "[ -f /data/local/tmp/frida-server ]; echo {"$?" if self.is_windows else "\\$?"}"',
+            if subprocess.check_output(f'adb shell {"su -c" if self.args.use_su else ""} "[ -f /data/local/tmp/frida-server ]; echo {"$?" if self.is_windows else chr(92) + "$?"}"',
                                        shell=True).strip() != b'0':
 
                 print('[-] frida-server does not exist in /data/local/tmp/frida-server')
