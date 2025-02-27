@@ -127,7 +127,7 @@ class BadadaShell(cmd.Cmd):
         parser.add_argument('--enable-jit', action='store_true', help='Uses V8 as the Javascript Runtime '
                                                                       'instead of the default')
 
-        parser.add_argument('-r', '--use-su', action='store_true', help='Allows rooted production builds devices to'
+        parser.add_argument('-r', '--use-su', action='store_true', help='Allows rooted production builds devices to '
                                                                         'escalate root privileges by calling `su -c`')
 
         parser.add_argument('--avoid-grandchildren-gating', action='store_true', help='Avoid enabling child-gating for '
@@ -167,7 +167,7 @@ class BadadaShell(cmd.Cmd):
 
         if self.args.processToHook != 'Gadget':
             print('[*] Checking if frida-server is located at tmp dir...')
-            if subprocess.check_output(f'adb shell {"su -c" if self.args.use_su else ""} "[ -f /data/local/tmp/frida-server ]; echo {"$?" if self.is_windows else chr(92) + "$?"}"',
+            if subprocess.check_output(f'adb shell {"su -c" if self.args.use_su else ""} "[ -f /data/local/tmp/frida-server ]; echo {"$?" if self.is_windows else chr(92) + "$?"}"', # chr(92) + "$?" == \\$?
                                        shell=True).strip() != b'0':
 
                 print('[-] frida-server does not exist in /data/local/tmp/frida-server')
@@ -458,7 +458,7 @@ class BadadaShell(cmd.Cmd):
                 log_file.write(" ---> ")
                 log_file.write(str(message) + '\n')
                 log_file.close()
-                
+
             sys.stdout.write('\n')
             sys.stdout.write(message.get('stack', str(message)) + '\n\n')
 
@@ -764,7 +764,6 @@ class BadadaShell(cmd.Cmd):
             except Exception as e:
                 print(f"Error saving file: {e}")
 
-
     @staticmethod
     def help_searchmethod():
         print('\n'.join(['Iterate in all classes, looking for a specific method']))
@@ -779,7 +778,7 @@ class BadadaShell(cmd.Cmd):
     @staticmethod
     def help_classes():
         print('\n'.join(['Show all classes in APK and loaded classes filtered by [<contains_this>]', 'Optionally you can pass "introspect" '
-                                                                           'to show loaded classes attributes']))
+                         'to show loaded classes attributes']))
 
     def do_methods(self, in_args):
         args = in_args.strip().split(" ")
