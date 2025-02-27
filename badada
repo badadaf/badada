@@ -92,6 +92,7 @@ class BadadaShell(cmd.Cmd):
     hook_lock = Lock()
     shouldStopFlag = False
     shouldStopFlagLock = Lock()
+    is_windows = os.name == 'nt'
 
     def cmdloop(self, *args, **kwargs):
         old_input_fn = cmd.__builtins__['input']
@@ -166,7 +167,7 @@ class BadadaShell(cmd.Cmd):
 
         if self.args.processToHook != 'Gadget':
             print('[*] Checking if frida-server is located at tmp dir...')
-            if subprocess.check_output(f'adb shell {"su -c" if self.args.use_su else ""} "[ -f /data/local/tmp/frida-server ]; echo {"$?" if os.name == 'nt' else "\\$?"}"',
+            if subprocess.check_output(f'adb shell {"su -c" if self.args.use_su else ""} "[ -f /data/local/tmp/frida-server ]; echo {"$?" if self.is_windows else "\\$?"}"',
                                        shell=True).strip() != b'0':
 
                 print('[-] frida-server does not exist in /data/local/tmp/frida-server')
