@@ -433,6 +433,11 @@ rpc.exports = {
                     scriptString += '\t\t\t\t\tclazz = classFactory.use(className);\n\t\t\t\t\treturn clazz;\n\t\t\t\t}\n\t\t\t\tcatch(error) {}\n\t\t\t}\n\t\t}\n';
                     scriptString += '\t\tthrow new Error("Could not find the class " + className + " in any class loader");\n\t}\n\n';
 
+                    scriptString += '\tfunction printStackTrace() {\n\t\tvar Exception = Java.use("java.lang.Exception");\n\n\t\tvar stackTrace = Exception.$new().getStackTrace();';
+                    scriptString += '\n\t\tconsole.log("[*] Stack Trace:");\n\n\t\tfor (var i = 0; i < stackTrace.length; i++) {\n\t\t\tconsole.log("\t" + stackTrace[i].toString());\n\t\t}\n\t}\n\n'
+
+
+
                     scriptString += '\tvar ' + classNiceName + ' = getClassFromAnyClassLoader("' + classFullPathName + '");\n\n';
 
                     var ClazzConstructors = Clazz.class.getDeclaredConstructors();
