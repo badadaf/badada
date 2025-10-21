@@ -10,6 +10,7 @@ It implements some commonly used Frida scripts and offer them via a simple comma
 - Frida Server for rooted devices (https://github.com/frida/frida/releases)
 - Frida Gadget for non-rooted devices (https://github.com/badadaf/apkpatcher)
 - ADB
+- Node 20+
 
 #### Before you use Badada!
 
@@ -25,6 +26,20 @@ In some devices frida may fail because it doesn't know exactly how to patch devi
 If you found some `avc: denied` messages in logcat after starting frida-server, you can try completely disable SELinux by running the following command before running frida-server:
 ```
 adb shell setenforce 0
+```
+
+###### Compiling scripts that use Java bridge
+
+With recent changes in Frida, the Java bridge is no longer bundled with frida-tools. 
+All scripts that use the bridge must be compiled using the Frida Compiler API (frida.Compiler) or the frida-compile npm tool.
+
+To enable this, initialize the tool's root directory as a Node.js project and install the frida-java-bridge module. 
+Before running Badada for the first time, run the following commands:
+
+```
+npm init -y 
+npm install --save frida-java-bridge
+npm install --save-dev frida-compile
 ```
 
 #### How to use Badada
