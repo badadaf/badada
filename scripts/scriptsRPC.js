@@ -1,3 +1,6 @@
+import Java from "frida-java-bridge";
+globalThis.Java = Java;
+
 'use strict';
 
 function getClassFromAnyClassLoader(className) {
